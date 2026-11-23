@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>食事記録アプリ</title>
+  <!-- ZIP ファイルを作る・読むためのライブラリ -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <style>
     body {
       font-family: sans-serif;
@@ -86,6 +88,25 @@
       color: #aaa;
       margin-top: 32px;
     }
+    #import-file {
+      display: none;
+    }
+    .backup {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .backup-btn {
+      flex: 1;
+      padding: 10px 8px;
+      border: 1px solid #ccc;
+      background: #fff;
+      color: #555;
+      font-family: inherit;
+      font-size: 0.9em;
+      text-align: center;
+      border-radius: 8px;
+    }
 
     /* ===== 静音カメラの画面（全画面） ===== */
     #quiet-cam {
@@ -162,6 +183,13 @@
   <input type="file" id="camera" accept="image/*" capture="environment">
 
   <div id="status"></div>
+
+  <div class="backup">
+    <button id="export-btn" class="backup-btn">💾 バックアップ</button>
+    <label for="import-file" class="backup-btn">📂 読み込み</label>
+  </div>
+  <input type="file" id="import-file" accept=".zip,application/zip">
+
   <div id="list"></div>
 
   <!-- 静音カメラ -->
@@ -248,7 +276,7 @@
       shownUrls = [];
 
       const records = await getAllRecords();
-      records.reverse(); // 新しい順
+      records.sort((a, b) => b.createdAt - a.createdAt); // 撮影日時の新しい順
 
       if (records.length === 0) {
         listEl.innerHTML = '<p class="empty">まだ記録がありません</p>';
@@ -366,6 +394,105 @@
     // 静音カメラを開いたまま別のアプリに切り替えたら、カメラを止める
     document.addEventListener('visibilitychange', () => {
       if (document.hidden && stream) closeQuietCam();
+    });
+
+    // ===== バックアップ（ZIP） =====
+    // ZIP の中身:
+    //   records.json … 日時・方式・サイズなどの情報
+    //   photos/2026-11-23_1230_5.jpg … 写真そのもの（PCでそのまま開ける）
+    const pad = (n) => String(n).padStart(2, '0');
+    function stamp(time) {
+      const d = new Date(time);
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`;
+    }
+
+    document.getElementById('export-btn').addEventListener('click', async () => {
+      const records = await getAllRecords();
+      if (records.length === 0) {
+        statusEl.textContent = 'バックアップする記録がありません';
+        return;
+      }
+      statusEl.textContent = 'バックアップを作成中…';
+      try {
+        const zip = new JSZip();
+        const list = records.map((r) => {
+          const file = `photos/${stamp(r.createdAt)}_${r.id}.jpg`;
+          zip.file(file, r.photo); // JPEG は圧縮済みなので、そのまま入れる
+          const { photo, id, ...info } = r;
+          return { ...info, file };
+        });
+        zip.file('records.json', JSON.stringify({ app: 'meal-log', version: 1, records: list }, null, 2), {
+          compression: 'DEFLATE',
+        });
+        const blob = await zip.generateAsync({ type: 'blob' });
+        const name = `meal-log-backup_${stamp(Date.now())}.zip`;
+        const file = new File([blob], name, { type: 'application/zip' });
+
+        // 共有メニューで送れる場合は共有（OneDrive などを選べる）
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({ files: [file], title: name });
+            statusEl.textContent = `共有しました（${records.length}件・${formatSize(blob.size)}）`;
+            return;
+          } catch (e) {
+            if (e.name === 'AbortError') {
+              statusEl.textContent = '共有をキャンセルしました';
+              return;
+            }
+            // 共有に失敗したらダウンロードに切り替える
+          }
+        }
+
+        // ダウンロードとして保存
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = name;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+        statusEl.textContent = `ダウンロードしました（${records.length}件・${formatSize(blob.size)}）`;
+      } catch (e) {
+        statusEl.textContent = 'バックアップに失敗しました：' + e.message;
+      }
+    });
+
+    const importFile = document.getElementById('import-file');
+    importFile.addEventListener('change', async () => {
+      const file = importFile.files[0];
+      importFile.value = '';
+      if (!file) return;
+      statusEl.textContent = '読み込み中…';
+      try {
+        const zip = await JSZip.loadAsync(file);
+        const json = zip.file('records.json');
+        if (!json) throw new Error('食事記録アプリのバックアップではありません');
+        const data = JSON.parse(await json.async('string'));
+
+        // すでにある記録（同じ撮影日時）は飛ばす → 何度読み込んでも重複しない
+        const existing = new Set((await getAllRecords()).map((r) => r.createdAt));
+        let added = 0;
+        let skipped = 0;
+        for (const info of data.records) {
+          if (existing.has(info.createdAt)) {
+            skipped++;
+            continue;
+          }
+          const photoFile = zip.file(info.file);
+          if (!photoFile) {
+            skipped++;
+            continue;
+          }
+          const photo = new Blob([await photoFile.async('arraybuffer')], { type: 'image/jpeg' });
+          const { file: _, ...rest } = info;
+          await addRecord({ ...rest, photo });
+          existing.add(info.createdAt);
+          added++;
+        }
+        statusEl.textContent = `読み込みました：追加 ${added}件` + (skipped ? `・重複などで飛ばした ${skipped}件` : '');
+        await showList();
+      } catch (e) {
+        statusEl.textContent = '読み込みに失敗しました：' + e.message;
+      }
     });
 
     showList();
