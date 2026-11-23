@@ -7,33 +7,49 @@
   <!-- ZIP ファイルを作る・読むためのライブラリ -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <style>
+    :root {
+      --accent: #ff8a3d;
+      --green: #4a8f6a;
+      --blue: #4a76a8;
+      --bg: #fffaf3;
+      --text: #333;
+      --sub: #888;
+      --line: #e8e0d4;
+    }
+    * {
+      box-sizing: border-box;
+    }
     body {
       font-family: sans-serif;
       margin: 0;
       padding: 16px;
-      background: #fffaf3;
-      color: #333;
+      background: var(--bg);
+      color: var(--text);
     }
     h1 {
       font-size: 1.4em;
+      margin: 0 0 12px;
     }
-    /* 本物の input は隠して、label をボタンに見せる */
-    #camera {
+    button {
+      font-family: inherit;
+      cursor: pointer;
+    }
+    .hidden-input {
       display: none;
     }
+
+    /* ===== ホーム ===== */
     .buttons {
       display: flex;
       gap: 8px;
     }
     .camera-btn {
       flex: 1;
-      display: block;
-      padding: 16px 8px;
+      padding: 14px 4px;
       border: none;
-      background: #ff8a3d;
+      background: var(--accent);
       color: #fff;
-      font-family: inherit;
-      font-size: 1em;
+      font-size: 0.95em;
       font-weight: bold;
       text-align: center;
       border-radius: 12px;
@@ -42,59 +58,19 @@
     .camera-btn small {
       display: block;
       font-weight: normal;
-      font-size: 0.75em;
+      font-size: 0.72em;
       opacity: 0.9;
     }
     .camera-btn.quiet {
-      background: #4a8f6a;
+      background: var(--green);
     }
-    #status {
-      min-height: 1.5em;
-      margin: 8px 0;
-      font-size: 0.9em;
-      color: #888;
-      text-align: center;
-    }
-    .record {
-      background: #fff;
-      border-radius: 12px;
-      margin-bottom: 16px;
-      overflow: hidden;
-      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-    }
-    .record img {
-      display: block;
-      width: 100%;
-    }
-    .record-info {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 8px 12px;
-    }
-    .record-meta {
-      font-size: 0.8em;
-      color: #888;
-    }
-    .delete-btn {
-      border: none;
-      background: none;
-      color: #c44;
-      font-size: 0.9em;
-      padding: 8px;
-    }
-    .empty {
-      text-align: center;
-      color: #aaa;
-      margin-top: 32px;
-    }
-    #import-file {
-      display: none;
+    .camera-btn.gallery {
+      background: var(--blue);
     }
     .backup {
       display: flex;
       gap: 8px;
-      margin-bottom: 12px;
+      margin: 12px 0;
     }
     .backup-btn {
       flex: 1;
@@ -102,23 +78,262 @@
       border: 1px solid #ccc;
       background: #fff;
       color: #555;
-      font-family: inherit;
       font-size: 0.9em;
       text-align: center;
       border-radius: 8px;
     }
+    .summary {
+      font-size: 0.8em;
+      color: var(--sub);
+      margin: 0 0 8px;
+    }
+    .day {
+      margin-bottom: 20px;
+    }
+    .day-title {
+      font-weight: bold;
+      padding: 4px 0;
+      border-bottom: 2px solid var(--line);
+      margin-bottom: 8px;
+    }
+    .meal {
+      background: #fff;
+      border-radius: 12px;
+      margin-bottom: 10px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+      overflow: hidden;
+    }
+    .meal-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 10px 12px;
+      border: none;
+      background: none;
+      color: inherit;
+      font-size: 1em;
+      text-align: left;
+    }
+    .meal-head .time {
+      color: var(--sub);
+      font-size: 0.9em;
+    }
+    .meal-head .edit {
+      margin-left: auto;
+      color: var(--sub);
+      font-size: 0.85em;
+    }
+    .thumbs {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding: 0 12px 12px;
+    }
+    .thumbs img {
+      flex: none;
+      width: 96px;
+      height: 96px;
+      object-fit: cover;
+      border-radius: 8px;
+      background: #eee;
+      cursor: pointer;
+    }
+    .empty {
+      text-align: center;
+      color: #aaa;
+      margin-top: 32px;
+    }
 
-    /* ===== 静音カメラの画面（全画面） ===== */
-    #quiet-cam {
+    /* ===== 重ねて表示する画面（入力・拡大・静音カメラ） ===== */
+    .overlay {
       display: none;
       position: fixed;
       inset: 0;
-      background: #000;
       z-index: 10;
+    }
+    .overlay.open {
+      display: flex;
       flex-direction: column;
     }
-    #quiet-cam.open {
+
+    /* ----- 入力・編集画面 ----- */
+    #editor {
+      background: var(--bg);
+      overflow-y: auto;
+      padding: 16px;
+    }
+    #editor h2 {
+      font-size: 1.2em;
+      margin: 0 0 4px;
+    }
+    .label {
+      font-size: 0.85em;
+      color: var(--sub);
+      margin: 16px 0 6px;
+    }
+    .edit-photos {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+    .edit-photo {
+      position: relative;
+      aspect-ratio: 1;
+    }
+    .edit-photo img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+    .edit-photo .remove {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      border: none;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.6);
+      color: #fff;
+      font-size: 16px;
+      line-height: 28px;
+    }
+    .add-row {
       display: flex;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .add-btn {
+      flex: 1;
+      padding: 10px 4px;
+      border: 1px dashed #bbb;
+      background: #fff;
+      border-radius: 8px;
+      color: #555;
+      font-size: 0.85em;
+    }
+    .types {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+    .type-btn {
+      padding: 12px 0;
+      border: 1px solid #ccc;
+      background: #fff;
+      border-radius: 8px;
+      font-size: 0.95em;
+      color: inherit;
+    }
+    .type-btn.selected {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      font-weight: bold;
+    }
+    #edit-time {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background: #fff;
+      font-family: inherit;
+      font-size: 1em;
+    }
+    .edit-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 24px;
+    }
+    .edit-actions button {
+      flex: 1;
+      padding: 14px;
+      border-radius: 10px;
+      font-size: 1em;
+    }
+    #edit-cancel {
+      border: 1px solid #ccc;
+      background: #fff;
+      color: inherit;
+    }
+    #edit-save {
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      font-weight: bold;
+    }
+    #edit-save:disabled {
+      opacity: 0.5;
+    }
+    #edit-delete {
+      display: block;
+      margin: 24px auto 8px;
+      padding: 8px;
+      border: none;
+      background: none;
+      color: #c44;
+      font-size: 0.9em;
+    }
+
+    /* ----- 写真の拡大表示 ----- */
+    #viewer {
+      background: #000;
+      color: #fff;
+      z-index: 15;
+    }
+    .viewer-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 8px 8px 16px;
+    }
+    #viewer-close {
+      border: none;
+      background: none;
+      color: #fff;
+      font-size: 1.8em;
+      padding: 0 12px;
+    }
+    #viewer-img {
+      flex: 1;
+      width: 100%;
+      min-height: 0;
+      object-fit: contain;
+    }
+    #viewer-info {
+      padding: 12px 16px 24px;
+      color: #bbb;
+      font-size: 0.8em;
+      text-align: center;
+    }
+    .viewer-nav {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 44px;
+      height: 64px;
+      border: none;
+      background: rgba(255, 255, 255, 0.15);
+      color: #fff;
+      font-size: 1.4em;
+    }
+    #viewer-prev {
+      left: 0;
+      border-radius: 0 8px 8px 0;
+    }
+    #viewer-next {
+      right: 0;
+      border-radius: 8px 0 0 8px;
+    }
+
+    /* ----- 静音カメラ ----- */
+    #quiet-cam {
+      background: #000;
+      z-index: 20;
     }
     #quiet-video {
       flex: 1;
@@ -133,12 +348,11 @@
       padding: 20px 16px 32px;
     }
     .cam-bar button {
+      width: 80px;
       border: none;
       background: none;
       color: #fff;
-      font-family: inherit;
       font-size: 1em;
-      width: 80px;
     }
     #shutter {
       width: 72px;
@@ -171,30 +385,90 @@
       color: #fff;
       text-align: center;
     }
+
+    /* ----- お知らせ（画面下に少し出るメッセージ） ----- */
+    #toast {
+      position: fixed;
+      left: 16px;
+      right: 16px;
+      bottom: 24px;
+      z-index: 30;
+      padding: 12px 16px;
+      border-radius: 10px;
+      background: rgba(40, 40, 40, 0.92);
+      color: #fff;
+      font-size: 0.9em;
+      text-align: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+    #toast.show {
+      opacity: 1;
+    }
   </style>
 </head>
 <body>
   <h1>食事記録アプリ</h1>
 
   <div class="buttons">
-    <label for="camera" class="camera-btn">📷 カメラアプリ<small>きれい・音あり</small></label>
-    <button id="open-quiet" class="camera-btn quiet">🔇 静音カメラ<small>音なし</small></button>
+    <button class="camera-btn" data-add="app">📷 カメラ<small>きれい・音あり</small></button>
+    <button class="camera-btn quiet" data-add="quiet">🔇 静音カメラ<small>音なし</small></button>
+    <button class="camera-btn gallery" data-add="gallery">🖼 ギャラリー<small>撮った写真から</small></button>
   </div>
-  <input type="file" id="camera" accept="image/*" capture="environment">
-
-  <div id="status"></div>
 
   <div class="backup">
     <button id="export-btn" class="backup-btn">💾 バックアップ</button>
     <label for="import-file" class="backup-btn">📂 読み込み</label>
   </div>
-  <!-- .mlbk は Android が知らない拡張子で、accept で絞ると選べなくなるため、絞らずに中身で判定する -->
-  <input type="file" id="import-file">
 
   <div id="list"></div>
 
+  <!-- 写真を受け取るための部品（画面には出さない） -->
+  <input type="file" id="camera-input" class="hidden-input" accept="image/*" capture="environment">
+  <input type="file" id="gallery-input" class="hidden-input" accept="image/*" multiple>
+  <!-- .mlbk は Android が知らない拡張子で、accept で絞ると選べなくなるため、絞らずに中身で判定する -->
+  <input type="file" id="import-file" class="hidden-input">
+
+  <!-- 入力・編集画面 -->
+  <div id="editor" class="overlay">
+    <h2 id="edit-title">新しい食事</h2>
+
+    <div class="label">写真</div>
+    <div id="edit-photos" class="edit-photos"></div>
+    <div class="add-row">
+      <button class="add-btn" data-add="app">＋📷 カメラ</button>
+      <button class="add-btn" data-add="quiet">＋🔇 静音</button>
+      <button class="add-btn" data-add="gallery">＋🖼 ギャラリー</button>
+    </div>
+
+    <div class="label">種類</div>
+    <div id="edit-types" class="types"></div>
+
+    <div class="label">日時</div>
+    <input type="datetime-local" id="edit-time">
+
+    <div class="edit-actions">
+      <button id="edit-cancel">キャンセル</button>
+      <button id="edit-save">保存</button>
+    </div>
+    <button id="edit-delete">この食事を削除</button>
+  </div>
+
+  <!-- 写真の拡大表示 -->
+  <div id="viewer" class="overlay">
+    <div class="viewer-top">
+      <span id="viewer-count"></span>
+      <button id="viewer-close" aria-label="閉じる">×</button>
+    </div>
+    <img id="viewer-img" alt="食事の写真">
+    <div id="viewer-info"></div>
+    <button id="viewer-prev" class="viewer-nav" aria-label="前の写真">‹</button>
+    <button id="viewer-next" class="viewer-nav" aria-label="次の写真">›</button>
+  </div>
+
   <!-- 静音カメラ -->
-  <div id="quiet-cam">
+  <div id="quiet-cam" class="overlay">
     <video id="quiet-video" autoplay playsinline muted></video>
     <div id="cam-msg"></div>
     <div class="cam-bar">
@@ -205,39 +479,168 @@
     <div id="flash"></div>
   </div>
 
+  <div id="toast"></div>
+
   <script>
-    // ===== IndexedDB の準備 =====
-    // データベース名 "meal-log"、その中に "records" という入れ物を作る
-    function openDB() {
-      return new Promise((resolve, reject) => {
-        const req = indexedDB.open('meal-log', 1);
-        req.onupgradeneeded = () => {
-          // 初回だけ実行される。id は自動で 1, 2, 3… と振られる
-          req.result.createObjectStore('records', { keyPath: 'id', autoIncrement: true });
-        };
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => reject(req.error);
-      });
+    // =====================================================
+    // 共通の部品
+    // =====================================================
+    const $ = (id) => document.getElementById(id);
+    const pad = (n) => String(n).padStart(2, '0');
+
+    const TYPES = {
+      breakfast: { label: '朝食', icon: '🌅' },
+      lunch: { label: '昼食', icon: '☀️' },
+      dinner: { label: '夕食', icon: '🌙' },
+      snack: { label: '間食', icon: '🍪' },
+    };
+    const SOURCE_ICON = { app: '📷', quiet: '🔇', gallery: '🖼' };
+
+    // 時刻から食事の種類を決める
+    function typeByTime(time) {
+      const h = new Date(time).getHours();
+      if (h >= 5 && h < 10) return 'breakfast';
+      if (h >= 10 && h < 15) return 'lunch';
+      if (h >= 15 && h < 17) return 'snack';
+      if (h >= 17 && h < 23) return 'dinner';
+      return 'snack';
     }
 
-    // 入れ物に対して1回の操作をする共通関数
+    function formatSize(bytes) {
+      if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + ' KB';
+      return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+    }
+    function formatTime(time) {
+      const d = new Date(time);
+      return `${d.getHours()}:${pad(d.getMinutes())}`;
+    }
+    function formatDay(time) {
+      const d = new Date(time);
+      return `${d.getMonth() + 1}月${d.getDate()}日(${'日月火水木金土'[d.getDay()]})`;
+    }
+    function dayKey(time) {
+      const d = new Date(time);
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    }
+    function stamp(time) {
+      const d = new Date(time);
+      return `${dayKey(time)}_${pad(d.getHours())}${pad(d.getMinutes())}`;
+    }
+    // <input type="datetime-local"> 用の文字列
+    function toLocalInput(time) {
+      const d = new Date(time);
+      return `${dayKey(time)}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    let toastTimer;
+    function toast(message, ms = 2500) {
+      const el = $('toast');
+      el.textContent = message;
+      el.classList.add('show');
+      clearTimeout(toastTimer);
+      if (ms) toastTimer = setTimeout(() => el.classList.remove('show'), ms);
+    }
+
+    // =====================================================
+    // データベース（IndexedDB）
+    // 1件 = 1回の食事
+    //   { id, createdAt, eatenAt, type, photos: [{ blob, width, height, source, originalSize }] }
+    // =====================================================
+    let dbPromise = null;
+    function getDB() {
+      if (!dbPromise) {
+        dbPromise = new Promise((resolve, reject) => {
+          const req = indexedDB.open('meal-log', 2);
+          req.onupgradeneeded = () => {
+            const db = req.result;
+            const tx = req.transaction;
+            const meals = db.objectStoreNames.contains('meals')
+              ? tx.objectStore('meals')
+              : db.createObjectStore('meals', { keyPath: 'id', autoIncrement: true });
+            // 以前の形式（写真1枚=1件の "records"）があれば、食事の形式に移す
+            if (db.objectStoreNames.contains('records')) {
+              tx.objectStore('records').openCursor().onsuccess = (e) => {
+                const cursor = e.target.result;
+                if (cursor) {
+                  meals.add(fromOldRecord(cursor.value, cursor.value.photo));
+                  cursor.continue();
+                } else {
+                  db.deleteObjectStore('records');
+                }
+              };
+            }
+          };
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+      }
+      return dbPromise;
+    }
+
+    // 以前の形式の1件を、食事の形式に変換
+    function fromOldRecord(r, blob) {
+      return {
+        createdAt: r.createdAt,
+        eatenAt: r.createdAt,
+        type: typeByTime(r.createdAt),
+        photos: [{ blob, width: r.width, height: r.height, source: r.source, originalSize: r.originalSize }],
+      };
+    }
+
     async function withStore(mode, action) {
-      const db = await openDB();
+      const db = await getDB();
       return new Promise((resolve, reject) => {
-        const tx = db.transaction('records', mode);
-        const req = action(tx.objectStore('records'));
+        const tx = db.transaction('meals', mode);
+        const req = action(tx.objectStore('meals'));
         tx.oncomplete = () => resolve(req.result);
         tx.onerror = () => reject(tx.error);
       });
     }
+    const getAllMeals = () => withStore('readonly', (s) => s.getAll());
+    const putMeal = (meal) => withStore('readwrite', (s) => s.put(meal));
+    const deleteMeal = (id) => withStore('readwrite', (s) => s.delete(id));
 
-    const addRecord = (record) => withStore('readwrite', (s) => s.add(record));
-    const getAllRecords = () => withStore('readonly', (s) => s.getAll());
-    const deleteRecord = (id) => withStore('readwrite', (s) => s.delete(id));
+    // =====================================================
+    // 重ねて表示する画面の管理
+    // Android の「戻る」で、アプリを抜けずに一番上の画面だけ閉じるようにする
+    // =====================================================
+    const layers = [];
+    let closeWaiters = [];
+    function openLayer(el, { onClose, beforeClose } = {}) {
+      el.classList.add('open');
+      layers.push({ el, onClose, beforeClose });
+      history.pushState({ layer: layers.length }, '');
+    }
+    // 一番上の画面を閉じる。閉じ終わったら完了する（続けて別の画面を開くときは await する）
+    function closeLayer() {
+      return new Promise((resolve) => {
+        closeWaiters.push(resolve);
+        history.back(); // → popstate で実際に閉じる
+      });
+    }
+    function topLayer() {
+      return layers[layers.length - 1]?.el;
+    }
+    window.addEventListener('popstate', () => {
+      const top = layers[layers.length - 1];
+      const waiters = closeWaiters;
+      closeWaiters = [];
+      if (top) {
+        if (top.beforeClose && !top.beforeClose()) {
+          history.pushState({ layer: layers.length }, ''); // 閉じるのをやめた
+        } else {
+          layers.pop();
+          top.el.classList.remove('open');
+          if (top.onClose) top.onClose();
+        }
+      }
+      waiters.forEach((resolve) => resolve());
+    });
 
-    // ===== 写真の縮小 =====
+    // =====================================================
+    // 写真の取り込み
+    // =====================================================
     // 長い辺を 1000px にして JPEG に変換（数MB → 100〜200KB 程度になる）
-    // source には写真ファイルでも、静音カメラの映像（video）でも渡せる
     async function resizeImage(source, maxSize = 1000) {
       const bitmap = await createImageBitmap(source);
       const scale = Math.min(1, maxSize / Math.max(bitmap.width, bitmap.height));
@@ -250,119 +653,122 @@
       return { blob, width: canvas.width, height: canvas.height };
     }
 
-    // ===== 画面 =====
-    const camera = document.getElementById('camera');
-    const statusEl = document.getElementById('status');
-    const listEl = document.getElementById('list');
-    let shownUrls = [];
-
-    function formatDate(time) {
-      const d = new Date(time);
-      const week = '日月火水木金土'[d.getDay()];
-      const hh = String(d.getHours()).padStart(2, '0');
-      const mm = String(d.getMinutes()).padStart(2, '0');
-      return `${d.getMonth() + 1}/${d.getDate()}(${week}) ${hh}:${mm}`;
-    }
-
-    function formatSize(bytes) {
-      if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + ' KB';
-      return (bytes / 1024 / 1024).toFixed(1) + ' MB';
-    }
-
-    const sourceLabel = { app: '📷', quiet: '🔇' };
-
-    async function showList() {
-      // 前回表示した画像のURLを解放（メモリ節約）
-      shownUrls.forEach((url) => URL.revokeObjectURL(url));
-      shownUrls = [];
-
-      const records = await getAllRecords();
-      records.sort((a, b) => b.createdAt - a.createdAt); // 撮影日時の新しい順
-
-      if (records.length === 0) {
-        listEl.innerHTML = '<p class="empty">まだ記録がありません</p>';
-        return;
-      }
-
-      const total = records.reduce((sum, r) => sum + r.photo.size, 0);
-      listEl.innerHTML = `<p class="record-meta">${records.length}件・合計 ${formatSize(total)}</p>`;
-
-      for (const r of records) {
-        const url = URL.createObjectURL(r.photo);
-        shownUrls.push(url);
-
-        // 以前の記録には width などが無いので、あるものだけ表示する
-        const meta = [sourceLabel[r.source], formatSize(r.photo.size)];
-        if (r.width) meta.push(`${r.width}×${r.height}`);
-        if (r.originalSize) meta.push(`元 ${formatSize(r.originalSize)}`);
-
-        const div = document.createElement('div');
-        div.className = 'record';
-        div.innerHTML = `
-          <img src="${url}" alt="食事の写真">
-          <div class="record-info">
-            <div>
-              <div>${formatDate(r.createdAt)}</div>
-              <div class="record-meta">${meta.filter(Boolean).join('・')}</div>
-            </div>
-            <button class="delete-btn">削除</button>
-          </div>`;
-        div.querySelector('.delete-btn').addEventListener('click', async () => {
-          if (!confirm('この記録を削除しますか？')) return;
-          await deleteRecord(r.id);
-          showList();
-        });
-        listEl.appendChild(div);
-      }
-    }
-
-    // 写真を縮小して保存 → 一覧を更新（どちらのカメラからも使う）
-    async function savePhoto(source, sourceType, originalSize) {
-      statusEl.textContent = '保存中…';
+    // JPEG の中に記録された撮影日時（EXIF）を読む。読めなければ null
+    async function readExifDate(file) {
       try {
-        const { blob, width, height } = await resizeImage(source);
-        await addRecord({
-          createdAt: Date.now(),
-          photo: blob,
-          width,
-          height,
-          source: sourceType,
-          originalSize,
-        });
-        statusEl.textContent = `保存しました（${formatSize(blob.size)}）`;
-        await showList();
-      } catch (e) {
-        statusEl.textContent = '保存に失敗しました：' + e.message;
+        const v = new DataView(await file.slice(0, 256 * 1024).arrayBuffer());
+        if (v.getUint16(0) !== 0xffd8) return null; // JPEG ではない
+        let off = 2;
+        while (off + 10 < v.byteLength) {
+          const marker = v.getUint16(off);
+          if ((marker & 0xff00) !== 0xff00) break;
+          if (marker === 0xffe1 && v.getUint32(off + 4) === 0x45786966) { // "Exif"
+            const t = off + 10; // ここから TIFF 形式
+            const le = v.getUint16(t) === 0x4949;
+            const u16 = (p) => v.getUint16(p, le);
+            const u32 = (p) => v.getUint32(p, le);
+            const find = (ifd, tag) => {
+              const n = u16(ifd);
+              for (let i = 0; i < n; i++) if (u16(ifd + 2 + i * 12) === tag) return ifd + 2 + i * 12;
+              return null;
+            };
+            const ifd0 = t + u32(t + 4);
+            let entry = null;
+            const exifIfd = find(ifd0, 0x8769);
+            if (exifIfd) entry = find(t + u32(exifIfd + 8), 0x9003); // 撮影日時
+            if (!entry) entry = find(ifd0, 0x0132); // 更新日時
+            if (!entry) return null;
+            let s = '';
+            for (let i = 0; i < 19; i++) s += String.fromCharCode(v.getUint8(t + u32(entry + 8) + i));
+            const m = s.match(/(\d{4}):(\d\d):(\d\d) (\d\d):(\d\d):(\d\d)/);
+            if (!m) return null;
+            return new Date(+m[1], m[2] - 1, +m[3], +m[4], +m[5], +m[6]).getTime();
+          }
+          off += 2 + v.getUint16(off + 2);
+        }
+      } catch {
+        // 読めない形式は気にしない
+      }
+      return null;
+    }
+
+    async function makePhoto(source, sourceType, originalSize) {
+      const { blob, width, height } = await resizeImage(source);
+      return { blob, width, height, source: sourceType, originalSize };
+    }
+
+    // 写真を受け取ったら：入力画面が開いていれば追加、そうでなければ新しい食事として開く
+    function receivePhotos(photos, takenAt) {
+      if (draft) {
+        draft.photos.push(...photos);
+        draftDirty = true;
+        renderEditor();
+      } else {
+        openEditor({ eatenAt: takenAt, type: typeByTime(takenAt), photos }, true);
       }
     }
 
-    // ----- 方法1：カメラアプリ -----
-    camera.addEventListener('change', async () => {
-      const file = camera.files[0];
-      if (!file) return;
-      await savePhoto(file, 'app', file.size);
-      camera.value = ''; // 同じ操作を続けてできるようにリセット
+    async function handleFiles(files, sourceType) {
+      if (files.length === 0) return;
+      toast('写真を読み込み中…', 0);
+      try {
+        const photos = [];
+        let takenAt = null;
+        for (const f of files) {
+          photos.push(await makePhoto(f, sourceType, f.size));
+          const t = sourceType === 'gallery' ? (await readExifDate(f)) ?? f.lastModified : Date.now();
+          if (takenAt === null || t < takenAt) takenAt = t;
+        }
+        toast('', 1);
+        receivePhotos(photos, takenAt);
+      } catch (e) {
+        toast('写真を読み込めませんでした：' + e.message, 5000);
+      }
+    }
+
+    const cameraInput = $('camera-input');
+    const galleryInput = $('gallery-input');
+    cameraInput.addEventListener('change', async () => {
+      await handleFiles([...cameraInput.files], 'app');
+      cameraInput.value = '';
+    });
+    galleryInput.addEventListener('change', async () => {
+      await handleFiles([...galleryInput.files], 'gallery');
+      galleryInput.value = '';
     });
 
-    // ----- 方法2：静音カメラ（カメラ映像の1コマを保存するので音が鳴らない） -----
-    const quietCam = document.getElementById('quiet-cam');
-    const video = document.getElementById('quiet-video');
-    const camMsg = document.getElementById('cam-msg');
-    const flash = document.getElementById('flash');
+    // 「カメラアプリ / 静音カメラ / ギャラリー」ボタン（ホームと入力画面の両方）
+    document.querySelectorAll('[data-add]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const how = btn.dataset.add;
+        if (how === 'app') cameraInput.click();
+        else if (how === 'gallery') galleryInput.click();
+        else openQuietCam();
+      });
+    });
+
+    // =====================================================
+    // 静音カメラ（カメラ映像の1コマを保存するので音が鳴らない）
+    // =====================================================
+    const video = $('quiet-video');
+    const camMsg = $('cam-msg');
     let stream = null;
 
+    function stopStream() {
+      if (stream) stream.getTracks().forEach((t) => t.stop());
+      stream = null;
+      video.srcObject = null;
+    }
+
     async function openQuietCam() {
-      quietCam.classList.add('open');
+      openLayer($('quiet-cam'), { onClose: stopStream });
       camMsg.textContent = 'カメラを起動中…';
       try {
         stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: 'environment', // 背面カメラ
-            width: { ideal: 1920 },
-            height: { ideal: 1920 },
-          },
+          video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1920 } },
           audio: false,
         });
+        if (topLayer() !== $('quiet-cam')) return stopStream(); // 起動中に閉じられた
         video.srcObject = stream;
         camMsg.textContent = '';
       } catch (e) {
@@ -372,43 +778,280 @@
       }
     }
 
-    function closeQuietCam() {
-      if (stream) stream.getTracks().forEach((t) => t.stop()); // カメラを止める
-      stream = null;
-      video.srcObject = null;
-      quietCam.classList.remove('open');
-    }
+    $('cam-cancel').addEventListener('click', closeLayer);
 
-    document.getElementById('open-quiet').addEventListener('click', openQuietCam);
-    document.getElementById('cam-cancel').addEventListener('click', closeQuietCam);
-
-    document.getElementById('shutter').addEventListener('click', async () => {
+    $('shutter').addEventListener('click', async () => {
       if (!stream || video.readyState < 2) return; // 映像がまだ来ていない
-      // 白く光らせて「撮れた」ことを伝える
+      const flash = $('flash');
       flash.classList.add('on');
       requestAnimationFrame(() => requestAnimationFrame(() => flash.classList.remove('on')));
-      const bitmap = await createImageBitmap(video); // 今のコマを確保してからカメラを閉じる
-      closeQuietCam();
-      await savePhoto(bitmap, 'quiet', null);
+      const bitmap = await createImageBitmap(video); // 今のコマを確保してから閉じる
+      await closeLayer();
+      try {
+        receivePhotos([await makePhoto(bitmap, 'quiet', null)], Date.now());
+      } catch (e) {
+        toast('写真を保存できませんでした：' + e.message, 5000);
+      }
     });
 
     // 静音カメラを開いたまま別のアプリに切り替えたら、カメラを止める
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden && stream) closeQuietCam();
+      if (document.hidden && topLayer() === $('quiet-cam')) closeLayer();
     });
 
-    // ===== バックアップ（ZIP） =====
+    // =====================================================
+    // 写真の表示用URL（同じ写真には同じURLを使い回し、不要になったら解放）
+    // =====================================================
+    function makeUrlCache() {
+      const map = new Map();
+      return {
+        get(blob) {
+          if (!map.has(blob)) map.set(blob, URL.createObjectURL(blob));
+          return map.get(blob);
+        },
+        clear() {
+          map.forEach((url) => URL.revokeObjectURL(url));
+          map.clear();
+        },
+      };
+    }
+    const listUrls = makeUrlCache();
+    const editorUrls = makeUrlCache();
+
+    // =====================================================
+    // 入力・編集画面
+    // =====================================================
+    let draft = null; // 編集中の食事
+    let draftDirty = false; // 変更があるか
+    let skipConfirm = false; // 保存・削除で閉じるときは確認しない
+
+    function openEditor(meal, isNew) {
+      draft = { ...meal, photos: [...meal.photos] };
+      draftDirty = isNew;
+      skipConfirm = false;
+      $('edit-title').textContent = isNew ? '新しい食事' : '食事を編集';
+      $('edit-delete').style.display = draft.id ? 'block' : 'none';
+      renderEditor();
+      $('editor').scrollTop = 0;
+      openLayer($('editor'), {
+        beforeClose: () => skipConfirm || !draftDirty || confirm('保存せずに閉じますか？'),
+        onClose: () => {
+          draft = null;
+          editorUrls.clear();
+        },
+      });
+    }
+
+    function renderEditor() {
+      // 写真
+      const box = $('edit-photos');
+      box.innerHTML = '';
+      draft.photos.forEach((p, i) => {
+        const div = document.createElement('div');
+        div.className = 'edit-photo';
+        div.innerHTML = `<img alt="写真${i + 1}"><button class="remove" aria-label="この写真を外す">×</button>`;
+        div.querySelector('img').src = editorUrls.get(p.blob);
+        div.querySelector('img').addEventListener('click', () => openViewer(draft.photos, i));
+        div.querySelector('.remove').addEventListener('click', () => {
+          draft.photos.splice(i, 1);
+          draftDirty = true;
+          renderEditor();
+        });
+        box.appendChild(div);
+      });
+
+      // 種類
+      const types = $('edit-types');
+      types.innerHTML = '';
+      for (const [key, t] of Object.entries(TYPES)) {
+        const b = document.createElement('button');
+        b.className = 'type-btn' + (draft.type === key ? ' selected' : '');
+        b.textContent = `${t.icon} ${t.label}`;
+        b.addEventListener('click', () => {
+          draft.type = key;
+          draftDirty = true;
+          renderEditor();
+        });
+        types.appendChild(b);
+      }
+
+      // 日時
+      $('edit-time').value = toLocalInput(draft.eatenAt);
+
+      $('edit-save').disabled = draft.photos.length === 0;
+    }
+
+    $('edit-time').addEventListener('change', () => {
+      const t = new Date($('edit-time').value).getTime();
+      if (!isNaN(t)) {
+        draft.eatenAt = t;
+        draftDirty = true;
+      }
+    });
+
+    $('edit-cancel').addEventListener('click', closeLayer);
+
+    $('edit-save').addEventListener('click', async () => {
+      if (!draft || draft.photos.length === 0) return;
+      const meal = { ...draft };
+      if (!meal.id) {
+        delete meal.id;
+        meal.createdAt = Date.now();
+      }
+      try {
+        await putMeal(meal);
+        skipConfirm = true;
+        closeLayer();
+        toast('保存しました');
+        showList();
+      } catch (e) {
+        toast('保存に失敗しました：' + e.message, 5000);
+      }
+    });
+
+    $('edit-delete').addEventListener('click', async () => {
+      if (!draft?.id || !confirm('この食事を削除しますか？（写真もすべて消えます）')) return;
+      await deleteMeal(draft.id);
+      skipConfirm = true;
+      closeLayer();
+      toast('削除しました');
+      showList();
+    });
+
+    // =====================================================
+    // 写真の拡大表示
+    // =====================================================
+    let viewerPhotos = [];
+    let viewerIndex = 0;
+    let viewerUrl = null;
+
+    function openViewer(photos, index) {
+      viewerPhotos = photos;
+      viewerIndex = index;
+      renderViewer();
+      openLayer($('viewer'), {
+        onClose: () => {
+          URL.revokeObjectURL(viewerUrl);
+          viewerUrl = null;
+        },
+      });
+    }
+
+    function renderViewer() {
+      const p = viewerPhotos[viewerIndex];
+      if (viewerUrl) URL.revokeObjectURL(viewerUrl);
+      viewerUrl = URL.createObjectURL(p.blob);
+      $('viewer-img').src = viewerUrl;
+      const many = viewerPhotos.length > 1;
+      $('viewer-count').textContent = many ? `${viewerIndex + 1} / ${viewerPhotos.length}` : '';
+      $('viewer-prev').style.display = many ? '' : 'none';
+      $('viewer-next').style.display = many ? '' : 'none';
+      const info = [SOURCE_ICON[p.source], formatSize(p.blob.size)];
+      if (p.width) info.push(`${p.width}×${p.height}`);
+      if (p.originalSize) info.push(`元 ${formatSize(p.originalSize)}`);
+      $('viewer-info').textContent = info.filter(Boolean).join('・');
+    }
+
+    function moveViewer(step) {
+      const n = viewerPhotos.length;
+      if (n < 2) return;
+      viewerIndex = (viewerIndex + step + n) % n;
+      renderViewer();
+    }
+
+    $('viewer-close').addEventListener('click', closeLayer);
+    $('viewer-prev').addEventListener('click', () => moveViewer(-1));
+    $('viewer-next').addEventListener('click', () => moveViewer(1));
+
+    // 左右にスワイプで切り替え
+    let touchX = null;
+    $('viewer').addEventListener('touchstart', (e) => (touchX = e.touches[0].clientX), { passive: true });
+    $('viewer').addEventListener('touchend', (e) => {
+      if (touchX === null) return;
+      const dx = e.changedTouches[0].clientX - touchX;
+      touchX = null;
+      if (Math.abs(dx) > 50) moveViewer(dx < 0 ? 1 : -1);
+    });
+
+    // PC ではキーボードでも操作できる
+    document.addEventListener('keydown', (e) => {
+      if (topLayer() !== $('viewer')) return;
+      if (e.key === 'ArrowLeft') moveViewer(-1);
+      if (e.key === 'ArrowRight') moveViewer(1);
+      if (e.key === 'Escape') closeLayer();
+    });
+
+    // =====================================================
+    // 一覧（日付ごと）
+    // =====================================================
+    async function showList() {
+      const list = $('list');
+      listUrls.clear();
+      const meals = await getAllMeals();
+
+      if (meals.length === 0) {
+        list.innerHTML = '<p class="empty">まだ記録がありません</p>';
+        return;
+      }
+
+      const photoCount = meals.reduce((n, m) => n + m.photos.length, 0);
+      const total = meals.reduce((n, m) => n + m.photos.reduce((s, p) => s + p.blob.size, 0), 0);
+      list.innerHTML = `<p class="summary">${meals.length}食・写真${photoCount}枚・合計 ${formatSize(total)}</p>`;
+
+      // 日付ごとにまとめる（日付は新しい順、1日の中は時刻順）
+      const days = new Map();
+      meals
+        .sort((a, b) => a.eatenAt - b.eatenAt)
+        .forEach((m) => {
+          const key = dayKey(m.eatenAt);
+          if (!days.has(key)) days.set(key, []);
+          days.get(key).push(m);
+        });
+
+      [...days.keys()].sort().reverse().forEach((key) => {
+        const dayMeals = days.get(key);
+        const day = document.createElement('section');
+        day.className = 'day';
+        day.innerHTML = `<div class="day-title">${formatDay(dayMeals[0].eatenAt)}</div>`;
+
+        for (const m of dayMeals) {
+          const t = TYPES[m.type] || TYPES.snack;
+          const div = document.createElement('div');
+          div.className = 'meal';
+          div.innerHTML = `
+            <button class="meal-head">
+              <span>${t.icon} ${t.label}</span>
+              <span class="time">${formatTime(m.eatenAt)}</span>
+              <span class="edit">✎ 編集</span>
+            </button>
+            <div class="thumbs"></div>`;
+          div.querySelector('.meal-head').addEventListener('click', () => openEditor(m, false));
+          const thumbs = div.querySelector('.thumbs');
+          m.photos.forEach((p, i) => {
+            const img = document.createElement('img');
+            img.alt = `${t.label}の写真${i + 1}`;
+            img.loading = 'lazy';
+            img.src = listUrls.get(p.blob);
+            img.addEventListener('click', () => openViewer(m.photos, i));
+            thumbs.appendChild(img);
+          });
+          day.appendChild(div);
+        }
+        list.appendChild(day);
+      });
+    }
+
+    // =====================================================
+    // バックアップ（暗号化した ZIP = .mlbk）
     // ZIP の中身:
-    //   records.json … 日時・方式・サイズなどの情報
-    //   photos/2026-11-23_1230_5.jpg … 写真そのもの（PCでそのまま開ける）
-    // ===== バックアップの暗号化 =====
-    // ZIP 全体を AES-GCM で暗号化して .mlbk ファイルにする。
+    //   records.json … 食事の情報（日時・種類・写真のファイル名など）
+    //   photos/2026-11-24_0730_5_1.jpg … 写真
+    // =====================================================
     // パスワードはアプリに埋め込み（このアプリ以外では開けないようにするのが目的）。
     // ※ この文字列を変えると、それ以前のバックアップが読めなくなるので変更しないこと
     const BACKUP_PASSWORD = 'meal-log/7f3c9a1e-backup-key/2026';
     const MAGIC = new TextEncoder().encode('MLBK1'); // ファイルの先頭に付ける目印
 
-    // パスワードと salt（ファイルごとのランダム値）から暗号鍵を作る
     async function deriveKey(salt) {
       const base = await crypto.subtle.importKey(
         'raw', new TextEncoder().encode(BACKUP_PASSWORD), 'PBKDF2', false, ['deriveKey']);
@@ -431,42 +1074,38 @@
     }
 
     async function decryptBackup(bytes) {
-      const salt = bytes.slice(5, 21);
-      const iv = bytes.slice(21, 33);
-      const key = await deriveKey(salt);
+      const key = await deriveKey(bytes.slice(5, 21));
       try {
-        return await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, bytes.slice(33));
+        return await crypto.subtle.decrypt({ name: 'AES-GCM', iv: bytes.slice(21, 33) }, key, bytes.slice(33));
       } catch {
         throw new Error('バックアップを解読できませんでした（ファイルが壊れている可能性があります）');
       }
     }
 
-    const pad = (n) => String(n).padStart(2, '0');
-    function stamp(time) {
-      const d = new Date(time);
-      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`;
-    }
-
-    document.getElementById('export-btn').addEventListener('click', async () => {
-      const records = await getAllRecords();
-      if (records.length === 0) {
-        statusEl.textContent = 'バックアップする記録がありません';
+    $('export-btn').addEventListener('click', async () => {
+      const meals = await getAllMeals();
+      if (meals.length === 0) {
+        toast('バックアップする記録がありません');
         return;
       }
-      statusEl.textContent = 'バックアップを作成中…';
+      toast('バックアップを作成中…', 0);
       try {
         const zip = new JSZip();
-        const list = records.map((r) => {
-          const file = `photos/${stamp(r.createdAt)}_${r.id}.jpg`;
-          zip.file(file, r.photo); // JPEG は圧縮済みなので、そのまま入れる
-          const { photo, id, ...info } = r;
-          return { ...info, file };
-        });
-        zip.file('records.json', JSON.stringify({ app: 'meal-log', version: 1, records: list }, null, 2), {
+        const list = meals.map((m) => ({
+          createdAt: m.createdAt,
+          eatenAt: m.eatenAt,
+          type: m.type,
+          photos: m.photos.map((p, i) => {
+            const file = `photos/${stamp(m.eatenAt)}_${m.id}_${i + 1}.jpg`;
+            zip.file(file, p.blob); // JPEG は圧縮済みなので、そのまま入れる
+            const { blob, ...info } = p;
+            return { ...info, file };
+          }),
+        }));
+        zip.file('records.json', JSON.stringify({ app: 'meal-log', version: 2, meals: list }, null, 2), {
           compression: 'DEFLATE',
         });
-        const zipBlob = await zip.generateAsync({ type: 'blob' });
-        const blob = await encryptBackup(zipBlob);
+        const blob = await encryptBackup(await zip.generateAsync({ type: 'blob' }));
         const name = `meal-log-backup_${stamp(Date.now())}.mlbk`;
 
         // ダウンロードとして保存（誤送信を防ぐため、共有メニューは使わない）
@@ -476,18 +1115,18 @@
         a.download = name;
         a.click();
         setTimeout(() => URL.revokeObjectURL(url), 10000);
-        statusEl.textContent = `ダウンロードしました（${records.length}件・${formatSize(blob.size)}）`;
+        toast(`ダウンロードしました（${meals.length}食・${formatSize(blob.size)}）`, 4000);
       } catch (e) {
-        statusEl.textContent = 'バックアップに失敗しました：' + e.message;
+        toast('バックアップに失敗しました：' + e.message, 5000);
       }
     });
 
-    const importFile = document.getElementById('import-file');
+    const importFile = $('import-file');
     importFile.addEventListener('change', async () => {
       const file = importFile.files[0];
       importFile.value = '';
       if (!file) return;
-      statusEl.textContent = '読み込み中…';
+      toast('読み込み中…', 0);
       try {
         // 暗号化バックアップ(.mlbk)なら解読、以前の ZIP ならそのまま読む
         const bytes = new Uint8Array(await file.arrayBuffer());
@@ -502,34 +1141,52 @@
         if (!json) throw new Error('食事記録アプリのバックアップではありません');
         const data = JSON.parse(await json.async('string'));
 
-        // すでにある記録（同じ撮影日時）は飛ばす → 何度読み込んでも重複しない
-        const existing = new Set((await getAllRecords()).map((r) => r.createdAt));
+        // 新しい形式（食事単位）と、以前の形式（写真1枚=1件）の両方に対応
+        let incoming;
+        if (data.meals) {
+          incoming = data.meals;
+        } else if (data.records) {
+          incoming = data.records.map((r) => {
+            const meal = fromOldRecord(r, null);
+            meal.photos[0].file = r.file;
+            return meal;
+          });
+        } else {
+          throw new Error('食事記録アプリのバックアップではありません');
+        }
+
+        // すでにある記録（同じ作成日時）は飛ばす → 何度読み込んでも重複しない
+        const existing = new Set((await getAllMeals()).map((m) => m.createdAt));
         let added = 0;
         let skipped = 0;
-        for (const info of data.records) {
-          if (existing.has(info.createdAt)) {
+        for (const m of incoming) {
+          if (existing.has(m.createdAt)) {
             skipped++;
             continue;
           }
-          const photoFile = zip.file(info.file);
-          if (!photoFile) {
+          const photos = [];
+          for (const p of m.photos) {
+            const f = zip.file(p.file);
+            if (!f) continue;
+            const { file: _, ...info } = p;
+            photos.push({ ...info, blob: new Blob([await f.async('arraybuffer')], { type: 'image/jpeg' }) });
+          }
+          if (photos.length === 0) {
             skipped++;
             continue;
           }
-          const photo = new Blob([await photoFile.async('arraybuffer')], { type: 'image/jpeg' });
-          const { file: _, ...rest } = info;
-          await addRecord({ ...rest, photo });
-          existing.add(info.createdAt);
+          await putMeal({ createdAt: m.createdAt, eatenAt: m.eatenAt, type: m.type, photos });
+          existing.add(m.createdAt);
           added++;
         }
-        statusEl.textContent = `読み込みました：追加 ${added}件` + (skipped ? `・重複などで飛ばした ${skipped}件` : '');
+        toast(`読み込みました：追加 ${added}食` + (skipped ? `・重複などで飛ばした ${skipped}食` : ''), 4000);
         await showList();
       } catch (e) {
-        statusEl.textContent = '読み込みに失敗しました：' + e.message;
+        toast('読み込みに失敗しました：' + e.message, 5000);
       }
     });
 
-    showList();
+    showList().catch((e) => toast('データを開けませんでした：' + e.message, 8000));
   </script>
 </body>
 </html>
