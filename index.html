@@ -188,7 +188,8 @@
     <button id="export-btn" class="backup-btn">💾 バックアップ</button>
     <label for="import-file" class="backup-btn">📂 読み込み</label>
   </div>
-  <input type="file" id="import-file" accept=".zip,application/zip">
+  <!-- .mlbk は Android が知らない拡張子で、accept で絞ると選べなくなるため、絞らずに中身で判定する -->
+  <input type="file" id="import-file">
 
   <div id="list"></div>
 
@@ -400,6 +401,46 @@
     // ZIP の中身:
     //   records.json … 日時・方式・サイズなどの情報
     //   photos/2026-11-23_1230_5.jpg … 写真そのもの（PCでそのまま開ける）
+    // ===== バックアップの暗号化 =====
+    // ZIP 全体を AES-GCM で暗号化して .mlbk ファイルにする。
+    // パスワードはアプリに埋め込み（このアプリ以外では開けないようにするのが目的）。
+    // ※ この文字列を変えると、それ以前のバックアップが読めなくなるので変更しないこと
+    const BACKUP_PASSWORD = 'meal-log/7f3c9a1e-backup-key/2026';
+    const MAGIC = new TextEncoder().encode('MLBK1'); // ファイルの先頭に付ける目印
+
+    // パスワードと salt（ファイルごとのランダム値）から暗号鍵を作る
+    async function deriveKey(salt) {
+      const base = await crypto.subtle.importKey(
+        'raw', new TextEncoder().encode(BACKUP_PASSWORD), 'PBKDF2', false, ['deriveKey']);
+      return crypto.subtle.deriveKey(
+        { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+        base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+    }
+
+    // ファイルの並び: 目印(5) + salt(16) + iv(12) + 暗号化されたZIP
+    async function encryptBackup(zipBlob) {
+      const salt = crypto.getRandomValues(new Uint8Array(16));
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const key = await deriveKey(salt);
+      const data = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, await zipBlob.arrayBuffer());
+      return new Blob([MAGIC, salt, iv, data], { type: 'application/octet-stream' });
+    }
+
+    function isEncrypted(bytes) {
+      return MAGIC.every((b, i) => bytes[i] === b);
+    }
+
+    async function decryptBackup(bytes) {
+      const salt = bytes.slice(5, 21);
+      const iv = bytes.slice(21, 33);
+      const key = await deriveKey(salt);
+      try {
+        return await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, bytes.slice(33));
+      } catch {
+        throw new Error('バックアップを解読できませんでした（ファイルが壊れている可能性があります）');
+      }
+    }
+
     const pad = (n) => String(n).padStart(2, '0');
     function stamp(time) {
       const d = new Date(time);
@@ -424,26 +465,11 @@
         zip.file('records.json', JSON.stringify({ app: 'meal-log', version: 1, records: list }, null, 2), {
           compression: 'DEFLATE',
         });
-        const blob = await zip.generateAsync({ type: 'blob' });
-        const name = `meal-log-backup_${stamp(Date.now())}.zip`;
-        const file = new File([blob], name, { type: 'application/zip' });
+        const zipBlob = await zip.generateAsync({ type: 'blob' });
+        const blob = await encryptBackup(zipBlob);
+        const name = `meal-log-backup_${stamp(Date.now())}.mlbk`;
 
-        // 共有メニューで送れる場合は共有（OneDrive などを選べる）
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          try {
-            await navigator.share({ files: [file], title: name });
-            statusEl.textContent = `共有しました（${records.length}件・${formatSize(blob.size)}）`;
-            return;
-          } catch (e) {
-            if (e.name === 'AbortError') {
-              statusEl.textContent = '共有をキャンセルしました';
-              return;
-            }
-            // 共有に失敗したらダウンロードに切り替える
-          }
-        }
-
-        // ダウンロードとして保存
+        // ダウンロードとして保存（誤送信を防ぐため、共有メニューは使わない）
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -463,7 +489,15 @@
       if (!file) return;
       statusEl.textContent = '読み込み中…';
       try {
-        const zip = await JSZip.loadAsync(file);
+        // 暗号化バックアップ(.mlbk)なら解読、以前の ZIP ならそのまま読む
+        const bytes = new Uint8Array(await file.arrayBuffer());
+        const zipData = isEncrypted(bytes) ? await decryptBackup(bytes) : bytes;
+        let zip;
+        try {
+          zip = await JSZip.loadAsync(zipData);
+        } catch {
+          throw new Error('食事記録アプリのバックアップではありません');
+        }
         const json = zip.file('records.json');
         if (!json) throw new Error('食事記録アプリのバックアップではありません');
         const data = JSON.parse(await json.async('string'));
