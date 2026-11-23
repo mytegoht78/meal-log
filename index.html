@@ -4,8 +4,58 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>食事記録アプリ</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 16px;
+      background: #fffaf3;
+      color: #333;
+    }
+    h1 {
+      font-size: 1.4em;
+    }
+    /* 本物の input は隠して、label をボタンに見せる */
+    #camera {
+      display: none;
+    }
+    .camera-btn {
+      display: block;
+      padding: 16px;
+      background: #ff8a3d;
+      color: #fff;
+      font-size: 1.1em;
+      font-weight: bold;
+      text-align: center;
+      border-radius: 12px;
+    }
+    #preview {
+      display: none;
+      width: 100%;
+      margin-top: 16px;
+      border-radius: 12px;
+    }
+  </style>
 </head>
 <body>
   <h1>食事記録アプリ</h1>
+
+  <label for="camera" class="camera-btn">📷 写真を撮る</label>
+  <input type="file" id="camera" accept="image/*" capture="environment">
+
+  <img id="preview" alt="撮った写真">
+
+  <script>
+    const camera = document.getElementById('camera');
+    const preview = document.getElementById('preview');
+
+    // 写真が撮られたら（選ばれたら）画面に表示する
+    camera.addEventListener('change', () => {
+      const file = camera.files[0];
+      if (!file) return;
+      preview.src = URL.createObjectURL(file);
+      preview.style.display = 'block';
+    });
+  </script>
 </body>
 </html>
