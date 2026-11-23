@@ -19,15 +19,32 @@
     #camera {
       display: none;
     }
+    .buttons {
+      display: flex;
+      gap: 8px;
+    }
     .camera-btn {
+      flex: 1;
       display: block;
-      padding: 16px;
+      padding: 16px 8px;
+      border: none;
       background: #ff8a3d;
       color: #fff;
-      font-size: 1.1em;
+      font-family: inherit;
+      font-size: 1em;
       font-weight: bold;
       text-align: center;
       border-radius: 12px;
+      line-height: 1.4;
+    }
+    .camera-btn small {
+      display: block;
+      font-weight: normal;
+      font-size: 0.75em;
+      opacity: 0.9;
+    }
+    .camera-btn.quiet {
+      background: #4a8f6a;
     }
     #status {
       min-height: 1.5em;
@@ -53,6 +70,10 @@
       align-items: center;
       padding: 8px 12px;
     }
+    .record-meta {
+      font-size: 0.8em;
+      color: #888;
+    }
     .delete-btn {
       border: none;
       background: none;
@@ -65,16 +86,95 @@
       color: #aaa;
       margin-top: 32px;
     }
+
+    /* ===== 静音カメラの画面（全画面） ===== */
+    #quiet-cam {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: #000;
+      z-index: 10;
+      flex-direction: column;
+    }
+    #quiet-cam.open {
+      display: flex;
+    }
+    #quiet-video {
+      flex: 1;
+      width: 100%;
+      min-height: 0;
+      object-fit: contain;
+    }
+    .cam-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      padding: 20px 16px 32px;
+    }
+    .cam-bar button {
+      border: none;
+      background: none;
+      color: #fff;
+      font-family: inherit;
+      font-size: 1em;
+      width: 80px;
+    }
+    #shutter {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: #fff;
+      border: 5px solid #888;
+    }
+    #shutter:active {
+      background: #ddd;
+    }
+    /* 音の代わりに、撮った瞬間に画面を白く光らせる */
+    #flash {
+      position: absolute;
+      inset: 0;
+      background: #fff;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+    #flash.on {
+      opacity: 0.8;
+      transition: none;
+    }
+    #cam-msg {
+      position: absolute;
+      top: 40%;
+      left: 16px;
+      right: 16px;
+      color: #fff;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
   <h1>食事記録アプリ</h1>
 
-  <label for="camera" class="camera-btn">📷 写真を撮る</label>
+  <div class="buttons">
+    <label for="camera" class="camera-btn">📷 カメラアプリ<small>きれい・音あり</small></label>
+    <button id="open-quiet" class="camera-btn quiet">🔇 静音カメラ<small>音なし</small></button>
+  </div>
   <input type="file" id="camera" accept="image/*" capture="environment">
 
   <div id="status"></div>
   <div id="list"></div>
+
+  <!-- 静音カメラ -->
+  <div id="quiet-cam">
+    <video id="quiet-video" autoplay playsinline muted></video>
+    <div id="cam-msg"></div>
+    <div class="cam-bar">
+      <button id="cam-cancel">キャンセル</button>
+      <button id="shutter" aria-label="撮影"></button>
+      <span style="width:80px"></span>
+    </div>
+    <div id="flash"></div>
+  </div>
 
   <script>
     // ===== IndexedDB の準備 =====
@@ -108,14 +208,17 @@
 
     // ===== 写真の縮小 =====
     // 長い辺を 1000px にして JPEG に変換（数MB → 100〜200KB 程度になる）
-    async function resizeImage(file, maxSize = 1000) {
-      const bitmap = await createImageBitmap(file);
+    // source には写真ファイルでも、静音カメラの映像（video）でも渡せる
+    async function resizeImage(source, maxSize = 1000) {
+      const bitmap = await createImageBitmap(source);
       const scale = Math.min(1, maxSize / Math.max(bitmap.width, bitmap.height));
       const canvas = document.createElement('canvas');
       canvas.width = Math.round(bitmap.width * scale);
       canvas.height = Math.round(bitmap.height * scale);
       canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-      return new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.85));
+      bitmap.close();
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.85));
+      return { blob, width: canvas.width, height: canvas.height };
     }
 
     // ===== 画面 =====
@@ -132,6 +235,13 @@
       return `${d.getMonth() + 1}/${d.getDate()}(${week}) ${hh}:${mm}`;
     }
 
+    function formatSize(bytes) {
+      if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + ' KB';
+      return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+    }
+
+    const sourceLabel = { app: '📷', quiet: '🔇' };
+
     async function showList() {
       // 前回表示した画像のURLを解放（メモリ節約）
       shownUrls.forEach((url) => URL.revokeObjectURL(url));
@@ -145,17 +255,27 @@
         return;
       }
 
-      listEl.innerHTML = '';
+      const total = records.reduce((sum, r) => sum + r.photo.size, 0);
+      listEl.innerHTML = `<p class="record-meta">${records.length}件・合計 ${formatSize(total)}</p>`;
+
       for (const r of records) {
         const url = URL.createObjectURL(r.photo);
         shownUrls.push(url);
+
+        // 以前の記録には width などが無いので、あるものだけ表示する
+        const meta = [sourceLabel[r.source], formatSize(r.photo.size)];
+        if (r.width) meta.push(`${r.width}×${r.height}`);
+        if (r.originalSize) meta.push(`元 ${formatSize(r.originalSize)}`);
 
         const div = document.createElement('div');
         div.className = 'record';
         div.innerHTML = `
           <img src="${url}" alt="食事の写真">
           <div class="record-info">
-            <span>${formatDate(r.createdAt)}</span>
+            <div>
+              <div>${formatDate(r.createdAt)}</div>
+              <div class="record-meta">${meta.filter(Boolean).join('・')}</div>
+            </div>
             <button class="delete-btn">削除</button>
           </div>`;
         div.querySelector('.delete-btn').addEventListener('click', async () => {
@@ -167,20 +287,85 @@
       }
     }
 
-    // 写真が撮られたら縮小して保存 → 一覧を更新
-    camera.addEventListener('change', async () => {
-      const file = camera.files[0];
-      if (!file) return;
+    // 写真を縮小して保存 → 一覧を更新（どちらのカメラからも使う）
+    async function savePhoto(source, sourceType, originalSize) {
       statusEl.textContent = '保存中…';
       try {
-        const photo = await resizeImage(file);
-        await addRecord({ createdAt: Date.now(), photo });
-        statusEl.textContent = '保存しました';
+        const { blob, width, height } = await resizeImage(source);
+        await addRecord({
+          createdAt: Date.now(),
+          photo: blob,
+          width,
+          height,
+          source: sourceType,
+          originalSize,
+        });
+        statusEl.textContent = `保存しました（${formatSize(blob.size)}）`;
         await showList();
       } catch (e) {
         statusEl.textContent = '保存に失敗しました：' + e.message;
       }
+    }
+
+    // ----- 方法1：カメラアプリ -----
+    camera.addEventListener('change', async () => {
+      const file = camera.files[0];
+      if (!file) return;
+      await savePhoto(file, 'app', file.size);
       camera.value = ''; // 同じ操作を続けてできるようにリセット
+    });
+
+    // ----- 方法2：静音カメラ（カメラ映像の1コマを保存するので音が鳴らない） -----
+    const quietCam = document.getElementById('quiet-cam');
+    const video = document.getElementById('quiet-video');
+    const camMsg = document.getElementById('cam-msg');
+    const flash = document.getElementById('flash');
+    let stream = null;
+
+    async function openQuietCam() {
+      quietCam.classList.add('open');
+      camMsg.textContent = 'カメラを起動中…';
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: 'environment', // 背面カメラ
+            width: { ideal: 1920 },
+            height: { ideal: 1920 },
+          },
+          audio: false,
+        });
+        video.srcObject = stream;
+        camMsg.textContent = '';
+      } catch (e) {
+        camMsg.textContent = e.name === 'NotAllowedError'
+          ? 'カメラの使用が許可されていません。Chromeのアドレスバー左のアイコンから、カメラを「許可」にしてください。'
+          : 'カメラを起動できませんでした：' + e.message;
+      }
+    }
+
+    function closeQuietCam() {
+      if (stream) stream.getTracks().forEach((t) => t.stop()); // カメラを止める
+      stream = null;
+      video.srcObject = null;
+      quietCam.classList.remove('open');
+    }
+
+    document.getElementById('open-quiet').addEventListener('click', openQuietCam);
+    document.getElementById('cam-cancel').addEventListener('click', closeQuietCam);
+
+    document.getElementById('shutter').addEventListener('click', async () => {
+      if (!stream || video.readyState < 2) return; // 映像がまだ来ていない
+      // 白く光らせて「撮れた」ことを伝える
+      flash.classList.add('on');
+      requestAnimationFrame(() => requestAnimationFrame(() => flash.classList.remove('on')));
+      const bitmap = await createImageBitmap(video); // 今のコマを確保してからカメラを閉じる
+      closeQuietCam();
+      await savePhoto(bitmap, 'quiet', null);
+    });
+
+    // 静音カメラを開いたまま別のアプリに切り替えたら、カメラを止める
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && stream) closeQuietCam();
     });
 
     showList();
