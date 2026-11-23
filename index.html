@@ -87,65 +87,88 @@
       color: var(--sub);
       margin: 0 0 8px;
     }
+
+    /* ----- 一覧（1日 = 4マス） ----- */
     .day {
-      margin-bottom: 20px;
+      background: #fff;
+      border-radius: 12px;
+      padding: 10px 10px 12px;
+      margin-bottom: 12px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    }
+    .day-head {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
     }
     .day-title {
       font-weight: bold;
-      padding: 4px 0;
-      border-bottom: 2px solid var(--line);
-      margin-bottom: 8px;
     }
-    .meal {
-      background: #fff;
-      border-radius: 12px;
-      margin-bottom: 10px;
-      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
-      overflow: hidden;
+    .day-title .today {
+      margin-left: 6px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.75em;
+      font-weight: normal;
     }
-    .meal-head {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      width: 100%;
-      padding: 10px 12px;
+    .day-edit {
+      margin-left: auto;
+      padding: 4px 8px;
       border: none;
       background: none;
-      color: inherit;
-      font-size: 1em;
-      text-align: left;
-    }
-    .meal-head .time {
-      color: var(--sub);
-      font-size: 0.9em;
-    }
-    .meal-head .edit {
-      margin-left: auto;
       color: var(--sub);
       font-size: 0.85em;
     }
-    .thumbs {
-      display: flex;
+    .day-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
       gap: 6px;
-      overflow-x: auto;
-      padding: 0 12px 12px;
     }
-    .thumbs img {
-      flex: none;
-      width: 96px;
-      height: 96px;
-      object-fit: cover;
-      border-radius: 8px;
-      background: #eee;
-      cursor: pointer;
-    }
-    .empty {
+    .cell-label {
+      font-size: 0.8em;
+      color: var(--sub);
       text-align: center;
-      color: #aaa;
-      margin-top: 32px;
+      margin-bottom: 3px;
+    }
+    .cell-box {
+      position: relative;
+      display: block;
+      width: 100%;
+      aspect-ratio: 1;
+      padding: 0;
+      border: none;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #eee;
+    }
+    .cell-box img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .cell-box.none {
+      border: 1px dashed #ccc;
+      background: #faf7f2;
+      color: #bbb;
+      font-size: 0.8em;
+      line-height: 1.5;
+    }
+    /* 複数枚あるときの印 */
+    .badge {
+      position: absolute;
+      right: 4px;
+      bottom: 4px;
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: rgba(0, 0, 0, 0.6);
+      color: #fff;
+      font-size: 0.72em;
     }
 
-    /* ===== 重ねて表示する画面（入力・拡大・静音カメラ） ===== */
+    /* ===== 重ねて表示する画面 ===== */
     .overlay {
       display: none;
       position: fixed;
@@ -156,65 +179,44 @@
       display: flex;
       flex-direction: column;
     }
-
-    /* ----- 入力・編集画面 ----- */
-    #editor {
-      background: var(--bg);
-      overflow-y: auto;
-      padding: 16px;
+    /* 下から出るシート */
+    .sheet-overlay {
+      background: rgba(0, 0, 0, 0.45);
+      justify-content: flex-end;
     }
-    #editor h2 {
-      font-size: 1.2em;
-      margin: 0 0 4px;
+    .sheet {
+      background: var(--bg);
+      border-radius: 16px 16px 0 0;
+      padding: 16px 16px 24px;
+      max-height: 92vh;
+      overflow-y: auto;
+    }
+    .sheet h2 {
+      font-size: 1.1em;
+      margin: 0 0 12px;
     }
     .label {
       font-size: 0.85em;
       color: var(--sub);
-      margin: 16px 0 6px;
+      margin: 14px 0 6px;
     }
-    .edit-photos {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 6px;
+    .note {
+      font-size: 0.85em;
+      color: var(--green);
+      margin-top: 8px;
+      min-height: 1.2em;
     }
-    .edit-photo {
-      position: relative;
-      aspect-ratio: 1;
-    }
-    .edit-photo img {
-      display: block;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      border-radius: 8px;
-    }
-    .edit-photo .remove {
-      position: absolute;
-      top: 4px;
-      right: 4px;
-      width: 28px;
-      height: 28px;
-      padding: 0;
-      border: none;
-      border-radius: 50%;
-      background: rgba(0, 0, 0, 0.6);
-      color: #fff;
-      font-size: 16px;
-      line-height: 28px;
-    }
-    .add-row {
+    .thumb-row {
       display: flex;
       gap: 6px;
-      margin-top: 8px;
+      overflow-x: auto;
     }
-    .add-btn {
-      flex: 1;
-      padding: 10px 4px;
-      border: 1px dashed #bbb;
-      background: #fff;
+    .thumb-row img {
+      flex: none;
+      width: 80px;
+      height: 80px;
+      object-fit: cover;
       border-radius: 8px;
-      color: #555;
-      font-size: 0.85em;
     }
     .types {
       display: grid;
@@ -226,8 +228,8 @@
       border: 1px solid #ccc;
       background: #fff;
       border-radius: 8px;
-      font-size: 0.95em;
       color: inherit;
+      font-size: 0.95em;
     }
     .type-btn.selected {
       background: var(--accent);
@@ -235,7 +237,7 @@
       color: #fff;
       font-weight: bold;
     }
-    #edit-time {
+    .date-input {
       width: 100%;
       padding: 10px;
       border: 1px solid #ccc;
@@ -244,39 +246,139 @@
       font-family: inherit;
       font-size: 1em;
     }
-    .edit-actions {
+    .actions {
       display: flex;
       gap: 8px;
-      margin-top: 24px;
+      margin-top: 20px;
     }
-    .edit-actions button {
+    .actions button {
       flex: 1;
       padding: 14px;
       border-radius: 10px;
       font-size: 1em;
     }
-    #edit-cancel {
+    .btn-sub {
       border: 1px solid #ccc;
       background: #fff;
       color: inherit;
     }
-    #edit-save {
+    .btn-main {
       border: none;
       background: var(--accent);
       color: #fff;
       font-weight: bold;
     }
-    #edit-save:disabled {
-      opacity: 0.5;
+    .choose-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
     }
-    #edit-delete {
+    .choose-list .camera-btn {
+      padding: 14px;
+    }
+
+    /* ----- 日の編集画面 ----- */
+    #day-editor {
+      background: var(--bg);
+      overflow-y: auto;
+      padding: 16px;
+    }
+    .ed-top {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .ed-top h2 {
+      font-size: 1.2em;
+      margin: 0;
+    }
+    .ed-top button {
+      margin-left: auto;
+      padding: 8px 16px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background: #fff;
+      color: inherit;
+    }
+    .ed-sec {
+      background: #fff;
+      border-radius: 12px;
+      padding: 10px;
+      margin-top: 10px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    }
+    .ed-head {
+      display: flex;
+      align-items: center;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+    .ed-add {
+      margin-left: auto;
+      padding: 6px 12px;
+      border: 1px dashed #bbb;
+      border-radius: 8px;
+      background: #fff;
+      color: #555;
+      font-size: 0.85em;
+      font-weight: normal;
+    }
+    .ed-none {
+      color: #bbb;
+      font-size: 0.85em;
+    }
+    .ed-photos {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .ed-photo {
+      position: relative;
+    }
+    .ed-photo img {
       display: block;
-      margin: 24px auto 8px;
-      padding: 8px;
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .ed-photo.cover img {
+      outline: 3px solid var(--accent);
+      outline-offset: -3px;
+    }
+    .ed-photo .star,
+    .ed-photo .remove {
+      position: absolute;
+      top: 4px;
+      width: 30px;
+      height: 30px;
+      padding: 0;
       border: none;
-      background: none;
-      color: #c44;
-      font-size: 0.9em;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.55);
+      color: #fff;
+      font-size: 16px;
+      line-height: 30px;
+    }
+    .ed-photo .star {
+      left: 4px;
+    }
+    .ed-photo.cover .star {
+      background: var(--accent);
+    }
+    .ed-photo .remove {
+      right: 4px;
+    }
+    .ed-photo select {
+      width: 100%;
+      margin-top: 4px;
+      padding: 4px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      background: #fff;
+      font-family: inherit;
+      font-size: 0.8em;
     }
 
     /* ----- 写真の拡大表示 ----- */
@@ -287,11 +389,24 @@
     }
     .viewer-top {
       display: flex;
-      justify-content: space-between;
       align-items: center;
+      gap: 8px;
       padding: 8px 8px 8px 16px;
     }
+    #viewer-cover {
+      padding: 6px 12px;
+      border: 1px solid #888;
+      border-radius: 16px;
+      background: none;
+      color: #fff;
+      font-size: 0.85em;
+    }
+    #viewer-cover.is-cover {
+      border-color: var(--accent);
+      background: var(--accent);
+    }
     #viewer-close {
+      margin-left: auto;
       border: none;
       background: none;
       color: #fff;
@@ -386,7 +501,7 @@
       text-align: center;
     }
 
-    /* ----- お知らせ（画面下に少し出るメッセージ） ----- */
+    /* ----- お知らせ ----- */
     #toast {
       position: fixed;
       left: 16px;
@@ -430,35 +545,52 @@
   <!-- .mlbk は Android が知らない拡張子で、accept で絞ると選べなくなるため、絞らずに中身で判定する -->
   <input type="file" id="import-file" class="hidden-input">
 
-  <!-- 入力・編集画面 -->
-  <div id="editor" class="overlay">
-    <h2 id="edit-title">新しい食事</h2>
-
-    <div class="label">写真</div>
-    <div id="edit-photos" class="edit-photos"></div>
-    <div class="add-row">
-      <button class="add-btn" data-add="app">＋📷 カメラ</button>
-      <button class="add-btn" data-add="quiet">＋🔇 静音</button>
-      <button class="add-btn" data-add="gallery">＋🖼 ギャラリー</button>
+  <!-- 撮影後の確認（種類・日付を確かめて保存） -->
+  <div id="confirm" class="overlay sheet-overlay" style="z-index:12">
+    <div class="sheet">
+      <h2>写真を追加</h2>
+      <div id="confirm-photos" class="thumb-row"></div>
+      <div class="label">日付</div>
+      <input type="date" id="confirm-date" class="date-input">
+      <div class="label">種類</div>
+      <div id="confirm-types" class="types"></div>
+      <div id="confirm-note" class="note"></div>
+      <div class="actions">
+        <button id="confirm-cancel" class="btn-sub">キャンセル</button>
+        <button id="confirm-save" class="btn-main">保存</button>
+      </div>
     </div>
+  </div>
 
-    <div class="label">種類</div>
-    <div id="edit-types" class="types"></div>
-
-    <div class="label">日時</div>
-    <input type="datetime-local" id="edit-time">
-
-    <div class="edit-actions">
-      <button id="edit-cancel">キャンセル</button>
-      <button id="edit-save">保存</button>
+  <!-- 「なし」や「＋追加」から開く、追加方法の選択 -->
+  <div id="chooser" class="overlay sheet-overlay" style="z-index:14">
+    <div class="sheet">
+      <h2 id="chooser-title"></h2>
+      <div class="choose-list">
+        <button class="camera-btn" data-choose="app">📷 カメラ</button>
+        <button class="camera-btn quiet" data-choose="quiet">🔇 静音カメラ</button>
+        <button class="camera-btn gallery" data-choose="gallery">🖼 ギャラリー</button>
+      </div>
+      <div class="actions">
+        <button id="chooser-cancel" class="btn-sub">キャンセル</button>
+      </div>
     </div>
-    <button id="edit-delete">この食事を削除</button>
+  </div>
+
+  <!-- 日の編集画面 -->
+  <div id="day-editor" class="overlay">
+    <div class="ed-top">
+      <h2 id="ed-title"></h2>
+      <button id="ed-close">閉じる</button>
+    </div>
+    <div id="ed-body"></div>
   </div>
 
   <!-- 写真の拡大表示 -->
   <div id="viewer" class="overlay">
     <div class="viewer-top">
       <span id="viewer-count"></span>
+      <button id="viewer-cover"></button>
       <button id="viewer-close" aria-label="閉じる">×</button>
     </div>
     <img id="viewer-img" alt="食事の写真">
@@ -494,6 +626,7 @@
       dinner: { label: '夕食', icon: '🌙' },
       snack: { label: '間食', icon: '🍪' },
     };
+    const TYPE_ORDER = ['breakfast', 'lunch', 'dinner', 'snack'];
     const SOURCE_ICON = { app: '📷', quiet: '🔇', gallery: '🖼' };
 
     // 時刻から食事の種類を決める
@@ -510,27 +643,29 @@
       if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + ' KB';
       return (bytes / 1024 / 1024).toFixed(1) + ' MB';
     }
-    function formatTime(time) {
-      const d = new Date(time);
-      return `${d.getHours()}:${pad(d.getMinutes())}`;
-    }
-    function formatDay(time) {
-      const d = new Date(time);
-      return `${d.getMonth() + 1}月${d.getDate()}日(${'日月火水木金土'[d.getDay()]})`;
-    }
+    // 日付は "2026-11-24" の文字列で扱う
     function dayKey(time) {
       const d = new Date(time);
       return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    }
+    function parseDay(day) {
+      const [y, m, d] = day.split('-').map(Number);
+      return new Date(y, m - 1, d);
+    }
+    function formatDay(day) {
+      const d = parseDay(day);
+      return `${d.getMonth() + 1}月${d.getDate()}日(${'日月火水木金土'[d.getDay()]})`;
+    }
+    function formatDateTime(time) {
+      const d = new Date(time);
+      return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${pad(d.getMinutes())}`;
     }
     function stamp(time) {
       const d = new Date(time);
       return `${dayKey(time)}_${pad(d.getHours())}${pad(d.getMinutes())}`;
     }
-    // <input type="datetime-local"> 用の文字列
-    function toLocalInput(time) {
-      const d = new Date(time);
-      return `${dayKey(time)}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    }
+    const slotKey = (day, type) => `${day}_${type}`;
+    const newId = () => crypto.randomUUID();
 
     let toastTimer;
     function toast(message, ms = 2500) {
@@ -541,34 +676,90 @@
       if (ms) toastTimer = setTimeout(() => el.classList.remove('show'), ms);
     }
 
+    // 写真の表示用URL（同じ写真には同じURLを使い回し、不要になったら解放）
+    function makeUrlCache() {
+      const map = new Map();
+      return {
+        get(blob) {
+          if (!map.has(blob)) map.set(blob, URL.createObjectURL(blob));
+          return map.get(blob);
+        },
+        clear() {
+          map.forEach((url) => URL.revokeObjectURL(url));
+          map.clear();
+        },
+      };
+    }
+
     // =====================================================
     // データベース（IndexedDB）
-    // 1件 = 1回の食事
-    //   { id, createdAt, eatenAt, type, photos: [{ blob, width, height, source, originalSize }] }
+    // 1件 = ある日のある種類の食事（例：11月24日の昼食）。1日に各種類1件まで
+    //   { key: "2026-11-24_lunch", day, type, cover: 代表写真のid,
+    //     photos: [{ id, blob, width, height, source, originalSize, takenAt, addedAt }] }
     // =====================================================
+
+    // 以前の形式からの変換。写真の id は作り方を固定して、
+    // 古いバックアップを読み込んでも同じ写真が二重に入らないようにする
+    function fromV1Record(r, blob) {
+      return {
+        day: dayKey(r.createdAt),
+        type: typeByTime(r.createdAt),
+        photos: [{
+          id: `legacy-${r.createdAt}-0`, blob, width: r.width, height: r.height,
+          source: r.source, originalSize: r.originalSize, takenAt: r.createdAt, addedAt: r.createdAt,
+        }],
+      };
+    }
+    function fromV2Meal(m) {
+      return {
+        day: dayKey(m.eatenAt),
+        type: m.type,
+        photos: m.photos.map((p, i) => ({
+          ...p, id: `legacy-${m.createdAt}-${i}`, takenAt: m.eatenAt, addedAt: m.createdAt + i,
+        })),
+      };
+    }
+
     let dbPromise = null;
     function getDB() {
       if (!dbPromise) {
         dbPromise = new Promise((resolve, reject) => {
-          const req = indexedDB.open('meal-log', 2);
+          const req = indexedDB.open('meal-log', 3);
           req.onupgradeneeded = () => {
             const db = req.result;
             const tx = req.transaction;
-            const meals = db.objectStoreNames.contains('meals')
-              ? tx.objectStore('meals')
-              : db.createObjectStore('meals', { keyPath: 'id', autoIncrement: true });
-            // 以前の形式（写真1枚=1件の "records"）があれば、食事の形式に移す
-            if (db.objectStoreNames.contains('records')) {
-              tx.objectStore('records').openCursor().onsuccess = (e) => {
+            const slots = db.objectStoreNames.contains('slots')
+              ? tx.objectStore('slots')
+              : db.createObjectStore('slots', { keyPath: 'key' });
+
+            // 以前の形式のデータを集めて、同じ日・同じ種類は1つにまとめる
+            const merged = new Map();
+            const mergeIn = (part) => {
+              const key = slotKey(part.day, part.type);
+              if (!merged.has(key)) merged.set(key, { key, day: part.day, type: part.type, photos: [] });
+              merged.get(key).photos.push(...part.photos);
+            };
+            const readOld = (name, convert, next) => {
+              if (!db.objectStoreNames.contains(name)) return next();
+              tx.objectStore(name).openCursor().onsuccess = (e) => {
                 const cursor = e.target.result;
                 if (cursor) {
-                  meals.add(fromOldRecord(cursor.value, cursor.value.photo));
+                  mergeIn(convert(cursor.value));
                   cursor.continue();
                 } else {
-                  db.deleteObjectStore('records');
+                  db.deleteObjectStore(name);
+                  next();
                 }
               };
-            }
+            };
+            readOld('records', (r) => fromV1Record(r, r.photo), () =>
+              readOld('meals', fromV2Meal, () => {
+                merged.forEach((s) => {
+                  s.photos.sort((a, b) => a.addedAt - b.addedAt);
+                  s.cover = s.photos[0].id; // 一番最初に登録した写真を代表に
+                  slots.put(s);
+                });
+              }));
           };
           req.onsuccess = () => resolve(req.result);
           req.onerror = () => reject(req.error);
@@ -577,28 +768,56 @@
       return dbPromise;
     }
 
-    // 以前の形式の1件を、食事の形式に変換
-    function fromOldRecord(r, blob) {
-      return {
-        createdAt: r.createdAt,
-        eatenAt: r.createdAt,
-        type: typeByTime(r.createdAt),
-        photos: [{ blob, width: r.width, height: r.height, source: r.source, originalSize: r.originalSize }],
-      };
-    }
-
     async function withStore(mode, action) {
       const db = await getDB();
       return new Promise((resolve, reject) => {
-        const tx = db.transaction('meals', mode);
-        const req = action(tx.objectStore('meals'));
+        const tx = db.transaction('slots', mode);
+        const req = action(tx.objectStore('slots'));
         tx.oncomplete = () => resolve(req.result);
         tx.onerror = () => reject(tx.error);
       });
     }
-    const getAllMeals = () => withStore('readonly', (s) => s.getAll());
-    const putMeal = (meal) => withStore('readwrite', (s) => s.put(meal));
-    const deleteMeal = (id) => withStore('readwrite', (s) => s.delete(id));
+    const getAllSlots = () => withStore('readonly', (s) => s.getAll());
+    const getSlot = (key) => withStore('readonly', (s) => s.get(key));
+    const getDaySlots = (day) => withStore('readonly', (s) => s.getAll(IDBKeyRange.bound(day + '_', day + '_￿')));
+    const putSlot = (slot) => withStore('readwrite', (s) => s.put(slot));
+    const deleteSlot = (key) => withStore('readwrite', (s) => s.delete(key));
+
+    // 写真を、ある日のある種類に追加（なければ作る。最初の写真が代表）
+    async function addPhotosToSlot(day, type, photos, preferredCover) {
+      const key = slotKey(day, type);
+      const slot = (await getSlot(key)) || { key, day, type, photos: [], cover: null };
+      const isNew = slot.photos.length === 0;
+      slot.photos.push(...photos);
+      if (isNew && preferredCover && photos.some((p) => p.id === preferredCover)) slot.cover = preferredCover;
+      if (!slot.cover) slot.cover = slot.photos[0].id;
+      await putSlot(slot);
+    }
+
+    // 写真を1枚取り外す（代表だったら次の写真が代表に。空になったら食事ごと消す）
+    async function takePhoto(key, photoId) {
+      const slot = await getSlot(key);
+      const i = slot.photos.findIndex((p) => p.id === photoId);
+      const [photo] = slot.photos.splice(i, 1);
+      if (slot.photos.length === 0) {
+        await deleteSlot(key);
+      } else {
+        if (slot.cover === photoId) slot.cover = slot.photos[0].id;
+        await putSlot(slot);
+      }
+      return { photo, slot };
+    }
+
+    async function movePhoto(key, photoId, toType) {
+      const { photo, slot } = await takePhoto(key, photoId);
+      await addPhotosToSlot(slot.day, toType, [photo]);
+    }
+
+    async function setCover(key, photoId) {
+      const slot = await getSlot(key);
+      slot.cover = photoId;
+      await putSlot(slot);
+    }
 
     // =====================================================
     // 重ねて表示する画面の管理
@@ -635,6 +854,12 @@
         }
       }
       waiters.forEach((resolve) => resolve());
+    });
+    // シートの外側（暗い部分）をタップしたら閉じる
+    document.querySelectorAll('.sheet-overlay').forEach((el) => {
+      el.addEventListener('click', (e) => {
+        if (e.target === el) closeLayer();
+      });
     });
 
     // =====================================================
@@ -692,19 +917,23 @@
       return null;
     }
 
-    async function makePhoto(source, sourceType, originalSize) {
+    async function makePhoto(source, sourceType, originalSize, takenAt) {
       const { blob, width, height } = await resizeImage(source);
-      return { blob, width, height, source: sourceType, originalSize };
+      return { id: newId(), blob, width, height, source: sourceType, originalSize, takenAt, addedAt: Date.now() };
     }
 
-    // 写真を受け取ったら：入力画面が開いていれば追加、そうでなければ新しい食事として開く
-    function receivePhotos(photos, takenAt) {
-      if (draft) {
-        draft.photos.push(...photos);
-        draftDirty = true;
-        renderEditor();
+    // 追加先（「なし」や「＋追加」から来たときだけ決まっている）
+    let addTarget = null;
+
+    async function receivePhotos(photos) {
+      if (addTarget) {
+        const { day, type } = addTarget;
+        addTarget = null;
+        await addPhotosToSlot(day, type, photos);
+        toast(`${formatDay(day)}の${TYPES[type].label}に追加しました`);
+        refreshAll();
       } else {
-        openEditor({ eatenAt: takenAt, type: typeByTime(takenAt), photos }, true);
+        openConfirm(photos);
       }
     }
 
@@ -713,14 +942,12 @@
       toast('写真を読み込み中…', 0);
       try {
         const photos = [];
-        let takenAt = null;
         for (const f of files) {
-          photos.push(await makePhoto(f, sourceType, f.size));
-          const t = sourceType === 'gallery' ? (await readExifDate(f)) ?? f.lastModified : Date.now();
-          if (takenAt === null || t < takenAt) takenAt = t;
+          const takenAt = sourceType === 'gallery' ? (await readExifDate(f)) ?? f.lastModified : Date.now();
+          photos.push(await makePhoto(f, sourceType, f.size, takenAt));
         }
         toast('', 1);
-        receivePhotos(photos, takenAt);
+        await receivePhotos(photos);
       } catch (e) {
         toast('写真を読み込めませんでした：' + e.message, 5000);
       }
@@ -737,14 +964,41 @@
       galleryInput.value = '';
     });
 
-    // 「カメラアプリ / 静音カメラ / ギャラリー」ボタン（ホームと入力画面の両方）
+    function startAdd(how) {
+      if (how === 'app') cameraInput.click();
+      else if (how === 'gallery') galleryInput.click();
+      else openQuietCam();
+    }
+
+    // ホームの3つのボタン：撮ったあとに確認画面で種類を選ぶ
     document.querySelectorAll('[data-add]').forEach((btn) => {
       btn.addEventListener('click', () => {
-        const how = btn.dataset.add;
-        if (how === 'app') cameraInput.click();
-        else if (how === 'gallery') galleryInput.click();
-        else openQuietCam();
+        addTarget = null;
+        startAdd(btn.dataset.add);
       });
+    });
+
+    // 追加方法の選択（「なし」のマスや、編集画面の「＋追加」から）
+    function openChooser(day, type) {
+      addTarget = { day, type };
+      $('chooser-title').textContent = `${formatDay(day)}の${TYPES[type].label}に追加`;
+      openLayer($('chooser'));
+    }
+    document.querySelectorAll('[data-choose]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const how = btn.dataset.choose;
+        if (how === 'quiet') {
+          await closeLayer();
+          openQuietCam();
+        } else {
+          startAdd(how); // ファイル選択はタップの直後に呼ぶ必要があるので先に開く
+          closeLayer();
+        }
+      });
+    });
+    $('chooser-cancel').addEventListener('click', () => {
+      addTarget = null;
+      closeLayer();
     });
 
     // =====================================================
@@ -788,7 +1042,7 @@
       const bitmap = await createImageBitmap(video); // 今のコマを確保してから閉じる
       await closeLayer();
       try {
-        receivePhotos([await makePhoto(bitmap, 'quiet', null)], Date.now());
+        await receivePhotos([await makePhoto(bitmap, 'quiet', null, Date.now())]);
       } catch (e) {
         toast('写真を保存できませんでした：' + e.message, 5000);
       }
@@ -800,134 +1054,177 @@
     });
 
     // =====================================================
-    // 写真の表示用URL（同じ写真には同じURLを使い回し、不要になったら解放）
+    // 撮影後の確認（日付・種類を確かめて保存）
     // =====================================================
-    function makeUrlCache() {
-      const map = new Map();
-      return {
-        get(blob) {
-          if (!map.has(blob)) map.set(blob, URL.createObjectURL(blob));
-          return map.get(blob);
-        },
-        clear() {
-          map.forEach((url) => URL.revokeObjectURL(url));
-          map.clear();
-        },
-      };
-    }
-    const listUrls = makeUrlCache();
-    const editorUrls = makeUrlCache();
+    let pending = null;
+    let confirmDone = false;
+    const confirmUrls = makeUrlCache();
 
-    // =====================================================
-    // 入力・編集画面
-    // =====================================================
-    let draft = null; // 編集中の食事
-    let draftDirty = false; // 変更があるか
-    let skipConfirm = false; // 保存・削除で閉じるときは確認しない
-
-    function openEditor(meal, isNew) {
-      draft = { ...meal, photos: [...meal.photos] };
-      draftDirty = isNew;
-      skipConfirm = false;
-      $('edit-title').textContent = isNew ? '新しい食事' : '食事を編集';
-      $('edit-delete').style.display = draft.id ? 'block' : 'none';
-      renderEditor();
-      $('editor').scrollTop = 0;
-      openLayer($('editor'), {
-        beforeClose: () => skipConfirm || !draftDirty || confirm('保存せずに閉じますか？'),
+    function openConfirm(photos) {
+      const first = Math.min(...photos.map((p) => p.takenAt));
+      pending = { photos, day: dayKey(first), type: typeByTime(first) };
+      confirmDone = false;
+      renderConfirm();
+      openLayer($('confirm'), {
+        beforeClose: () => confirmDone || confirm('写真を追加せずに閉じますか？'),
         onClose: () => {
-          draft = null;
-          editorUrls.clear();
+          pending = null;
+          confirmUrls.clear();
         },
       });
     }
 
-    function renderEditor() {
-      // 写真
-      const box = $('edit-photos');
-      box.innerHTML = '';
-      draft.photos.forEach((p, i) => {
-        const div = document.createElement('div');
-        div.className = 'edit-photo';
-        div.innerHTML = `<img alt="写真${i + 1}"><button class="remove" aria-label="この写真を外す">×</button>`;
-        div.querySelector('img').src = editorUrls.get(p.blob);
-        div.querySelector('img').addEventListener('click', () => openViewer(draft.photos, i));
-        div.querySelector('.remove').addEventListener('click', () => {
-          draft.photos.splice(i, 1);
-          draftDirty = true;
-          renderEditor();
-        });
-        box.appendChild(div);
+    async function renderConfirm() {
+      const row = $('confirm-photos');
+      row.innerHTML = '';
+      pending.photos.forEach((p, i) => {
+        const img = document.createElement('img');
+        img.src = confirmUrls.get(p.blob);
+        img.alt = `写真${i + 1}`;
+        img.addEventListener('click', () => openViewer(pending.photos, i, null));
+        row.appendChild(img);
       });
 
-      // 種類
-      const types = $('edit-types');
+      $('confirm-date').value = pending.day;
+
+      const types = $('confirm-types');
       types.innerHTML = '';
-      for (const [key, t] of Object.entries(TYPES)) {
+      for (const key of TYPE_ORDER) {
         const b = document.createElement('button');
-        b.className = 'type-btn' + (draft.type === key ? ' selected' : '');
-        b.textContent = `${t.icon} ${t.label}`;
+        b.className = 'type-btn' + (pending.type === key ? ' selected' : '');
+        b.textContent = `${TYPES[key].icon} ${TYPES[key].label}`;
         b.addEventListener('click', () => {
-          draft.type = key;
-          draftDirty = true;
-          renderEditor();
+          pending.type = key;
+          renderConfirm();
         });
         types.appendChild(b);
       }
 
-      // 日時
-      $('edit-time').value = toLocalInput(draft.eatenAt);
-
-      $('edit-save').disabled = draft.photos.length === 0;
+      // すでに写真がある場合は、そこに追加されることを知らせる
+      const { day, type } = pending;
+      const slot = await getSlot(slotKey(day, type));
+      if (!pending || pending.day !== day || pending.type !== type) return; // 途中で変わった
+      $('confirm-note').textContent = slot
+        ? `この日の${TYPES[type].label}にはすでに${slot.photos.length}枚あります。そこに追加します。`
+        : '';
     }
 
-    $('edit-time').addEventListener('change', () => {
-      const t = new Date($('edit-time').value).getTime();
-      if (!isNaN(t)) {
-        draft.eatenAt = t;
-        draftDirty = true;
+    $('confirm-date').addEventListener('change', () => {
+      if ($('confirm-date').value) {
+        pending.day = $('confirm-date').value;
+        renderConfirm();
       }
     });
-
-    $('edit-cancel').addEventListener('click', closeLayer);
-
-    $('edit-save').addEventListener('click', async () => {
-      if (!draft || draft.photos.length === 0) return;
-      const meal = { ...draft };
-      if (!meal.id) {
-        delete meal.id;
-        meal.createdAt = Date.now();
-      }
+    $('confirm-cancel').addEventListener('click', closeLayer);
+    $('confirm-save').addEventListener('click', async () => {
+      if (!pending) return;
+      const { day, type, photos } = pending;
       try {
-        await putMeal(meal);
-        skipConfirm = true;
+        await addPhotosToSlot(day, type, photos);
+        confirmDone = true;
         closeLayer();
-        toast('保存しました');
-        showList();
+        toast(`${formatDay(day)}の${TYPES[type].label}に保存しました`);
+        refreshAll();
       } catch (e) {
         toast('保存に失敗しました：' + e.message, 5000);
       }
     });
 
-    $('edit-delete').addEventListener('click', async () => {
-      if (!draft?.id || !confirm('この食事を削除しますか？（写真もすべて消えます）')) return;
-      await deleteMeal(draft.id);
-      skipConfirm = true;
-      closeLayer();
-      toast('削除しました');
-      showList();
-    });
+    // =====================================================
+    // 日の編集画面（代表の変更・写真の削除・種類の移動・追加）
+    // =====================================================
+    let editingDay = null;
+    const editorUrls = makeUrlCache();
+
+    function openDayEditor(day) {
+      editingDay = day;
+      $('ed-title').textContent = `${formatDay(day)}の編集`;
+      $('day-editor').scrollTop = 0;
+      renderDayEditor();
+      openLayer($('day-editor'), {
+        onClose: () => {
+          editingDay = null;
+          editorUrls.clear();
+        },
+      });
+    }
+
+    async function renderDayEditor() {
+      if (!editingDay) return;
+      const day = editingDay;
+      const slots = await getDaySlots(day);
+      if (editingDay !== day) return;
+      editorUrls.clear();
+      const body = $('ed-body');
+      body.innerHTML = '';
+
+      for (const type of TYPE_ORDER) {
+        const slot = slots.find((s) => s.type === type);
+        const sec = document.createElement('section');
+        sec.className = 'ed-sec';
+        sec.innerHTML = `
+          <div class="ed-head">${TYPES[type].icon} ${TYPES[type].label}
+            <button class="ed-add">＋追加</button>
+          </div>`;
+        sec.querySelector('.ed-add').addEventListener('click', () => openChooser(day, type));
+
+        if (!slot) {
+          sec.insertAdjacentHTML('beforeend', '<div class="ed-none">なし</div>');
+        } else {
+          const grid = document.createElement('div');
+          grid.className = 'ed-photos';
+          slot.photos.forEach((p, i) => {
+            const isCover = p.id === slot.cover;
+            const div = document.createElement('div');
+            div.className = 'ed-photo' + (isCover ? ' cover' : '');
+            div.innerHTML = `
+              <img alt="写真${i + 1}">
+              <button class="star" aria-label="代表にする">${isCover ? '★' : '☆'}</button>
+              <button class="remove" aria-label="削除">×</button>
+              <select aria-label="種類を移動">
+                ${TYPE_ORDER.map((t) => `<option value="${t}"${t === type ? ' selected' : ''}>${TYPES[t].label}${t === type ? '' : 'へ移動'}</option>`).join('')}
+              </select>`;
+            div.querySelector('img').src = editorUrls.get(p.blob);
+            div.querySelector('img').addEventListener('click', () => openViewer(slot.photos, i, slot.key));
+            div.querySelector('.star').addEventListener('click', async () => {
+              await setCover(slot.key, p.id);
+              refreshAll();
+            });
+            div.querySelector('.remove').addEventListener('click', async () => {
+              if (!confirm('この写真を削除しますか？')) return;
+              await takePhoto(slot.key, p.id);
+              toast('削除しました');
+              refreshAll();
+            });
+            div.querySelector('select').addEventListener('change', async (e) => {
+              await movePhoto(slot.key, p.id, e.target.value);
+              toast(`${TYPES[e.target.value].label}へ移動しました`);
+              refreshAll();
+            });
+            grid.appendChild(div);
+          });
+          sec.appendChild(grid);
+        }
+        body.appendChild(sec);
+      }
+    }
+
+    $('ed-close').addEventListener('click', closeLayer);
 
     // =====================================================
     // 写真の拡大表示
     // =====================================================
     let viewerPhotos = [];
     let viewerIndex = 0;
+    let viewerSlotKey = null; // 代表を変えられるのは、保存済みの写真のときだけ
+    let viewerCover = null;
     let viewerUrl = null;
 
-    function openViewer(photos, index) {
+    async function openViewer(photos, index, key) {
       viewerPhotos = photos;
       viewerIndex = index;
+      viewerSlotKey = key;
+      viewerCover = key ? (await getSlot(key))?.cover : null;
       renderViewer();
       openLayer($('viewer'), {
         onClose: () => {
@@ -946,7 +1243,14 @@
       $('viewer-count').textContent = many ? `${viewerIndex + 1} / ${viewerPhotos.length}` : '';
       $('viewer-prev').style.display = many ? '' : 'none';
       $('viewer-next').style.display = many ? '' : 'none';
-      const info = [SOURCE_ICON[p.source], formatSize(p.blob.size)];
+
+      const coverBtn = $('viewer-cover');
+      coverBtn.style.display = viewerSlotKey && many ? '' : 'none';
+      const isCover = p.id === viewerCover;
+      coverBtn.textContent = isCover ? '★ 代表写真' : '☆ 代表にする';
+      coverBtn.classList.toggle('is-cover', isCover);
+
+      const info = [p.takenAt ? formatDateTime(p.takenAt) : '', SOURCE_ICON[p.source], formatSize(p.blob.size)];
       if (p.width) info.push(`${p.width}×${p.height}`);
       if (p.originalSize) info.push(`元 ${formatSize(p.originalSize)}`);
       $('viewer-info').textContent = info.filter(Boolean).join('・');
@@ -959,6 +1263,15 @@
       renderViewer();
     }
 
+    $('viewer-cover').addEventListener('click', async () => {
+      const p = viewerPhotos[viewerIndex];
+      if (!viewerSlotKey || p.id === viewerCover) return;
+      await setCover(viewerSlotKey, p.id);
+      viewerCover = p.id;
+      renderViewer();
+      toast('代表写真にしました');
+      refreshAll();
+    });
     $('viewer-close').addEventListener('click', closeLayer);
     $('viewer-prev').addEventListener('click', () => moveViewer(-1));
     $('viewer-next').addEventListener('click', () => moveViewer(1));
@@ -982,70 +1295,84 @@
     });
 
     // =====================================================
-    // 一覧（日付ごと）
+    // 一覧（1日 = 朝食・昼食・夕食・間食の4マス）
     // =====================================================
+    const listUrls = makeUrlCache();
+
     async function showList() {
       const list = $('list');
+      const slots = await getAllSlots();
       listUrls.clear();
-      const meals = await getAllMeals();
 
-      if (meals.length === 0) {
-        list.innerHTML = '<p class="empty">まだ記録がありません</p>';
-        return;
+      const byDay = new Map();
+      for (const s of slots) {
+        if (!byDay.has(s.day)) byDay.set(s.day, {});
+        byDay.get(s.day)[s.type] = s;
+      }
+      const today = dayKey(Date.now());
+      if (!byDay.has(today)) byDay.set(today, {}); // 今日は記録がなくても出す
+
+      list.innerHTML = '';
+      if (slots.length > 0) {
+        const photoCount = slots.reduce((n, s) => n + s.photos.length, 0);
+        const total = slots.reduce((n, s) => n + s.photos.reduce((t, p) => t + p.blob.size, 0), 0);
+        const dayCount = new Set(slots.map((s) => s.day)).size;
+        list.innerHTML = `<p class="summary">${dayCount}日分・写真${photoCount}枚・合計 ${formatSize(total)}</p>`;
       }
 
-      const photoCount = meals.reduce((n, m) => n + m.photos.length, 0);
-      const total = meals.reduce((n, m) => n + m.photos.reduce((s, p) => s + p.blob.size, 0), 0);
-      list.innerHTML = `<p class="summary">${meals.length}食・写真${photoCount}枚・合計 ${formatSize(total)}</p>`;
+      [...byDay.keys()].sort().reverse().forEach((day) => {
+        const daySlots = byDay.get(day);
+        const sec = document.createElement('section');
+        sec.className = 'day';
+        sec.innerHTML = `
+          <div class="day-head">
+            <span class="day-title">${formatDay(day)}${day === today ? '<span class="today">今日</span>' : ''}</span>
+            <button class="day-edit">✎ 編集</button>
+          </div>
+          <div class="day-grid"></div>`;
+        sec.querySelector('.day-edit').addEventListener('click', () => openDayEditor(day));
+        const grid = sec.querySelector('.day-grid');
 
-      // 日付ごとにまとめる（日付は新しい順、1日の中は時刻順）
-      const days = new Map();
-      meals
-        .sort((a, b) => a.eatenAt - b.eatenAt)
-        .forEach((m) => {
-          const key = dayKey(m.eatenAt);
-          if (!days.has(key)) days.set(key, []);
-          days.get(key).push(m);
-        });
-
-      [...days.keys()].sort().reverse().forEach((key) => {
-        const dayMeals = days.get(key);
-        const day = document.createElement('section');
-        day.className = 'day';
-        day.innerHTML = `<div class="day-title">${formatDay(dayMeals[0].eatenAt)}</div>`;
-
-        for (const m of dayMeals) {
-          const t = TYPES[m.type] || TYPES.snack;
-          const div = document.createElement('div');
-          div.className = 'meal';
-          div.innerHTML = `
-            <button class="meal-head">
-              <span>${t.icon} ${t.label}</span>
-              <span class="time">${formatTime(m.eatenAt)}</span>
-              <span class="edit">✎ 編集</span>
-            </button>
-            <div class="thumbs"></div>`;
-          div.querySelector('.meal-head').addEventListener('click', () => openEditor(m, false));
-          const thumbs = div.querySelector('.thumbs');
-          m.photos.forEach((p, i) => {
+        for (const type of TYPE_ORDER) {
+          const slot = daySlots[type];
+          const cell = document.createElement('div');
+          cell.innerHTML = `<div class="cell-label">${TYPES[type].label}</div>`;
+          const box = document.createElement('button');
+          box.className = 'cell-box';
+          if (slot) {
+            const coverIndex = Math.max(0, slot.photos.findIndex((p) => p.id === slot.cover));
             const img = document.createElement('img');
-            img.alt = `${t.label}の写真${i + 1}`;
+            img.alt = `${formatDay(day)}の${TYPES[type].label}`;
             img.loading = 'lazy';
-            img.src = listUrls.get(p.blob);
-            img.addEventListener('click', () => openViewer(m.photos, i));
-            thumbs.appendChild(img);
-          });
-          day.appendChild(div);
+            img.src = listUrls.get(slot.photos[coverIndex].blob);
+            box.appendChild(img);
+            if (slot.photos.length > 1) {
+              box.insertAdjacentHTML('beforeend', `<span class="badge">❐${slot.photos.length}</span>`);
+            }
+            box.addEventListener('click', () => openViewer(slot.photos, coverIndex, slot.key));
+          } else {
+            box.classList.add('none');
+            box.innerHTML = 'なし<br>＋';
+            box.setAttribute('aria-label', `${formatDay(day)}の${TYPES[type].label}を追加`);
+            box.addEventListener('click', () => openChooser(day, type));
+          }
+          cell.appendChild(box);
+          grid.appendChild(cell);
         }
-        list.appendChild(day);
+        list.appendChild(sec);
       });
+    }
+
+    function refreshAll() {
+      showList();
+      renderDayEditor();
     }
 
     // =====================================================
     // バックアップ（暗号化した ZIP = .mlbk）
     // ZIP の中身:
-    //   records.json … 食事の情報（日時・種類・写真のファイル名など）
-    //   photos/2026-11-24_0730_5_1.jpg … 写真
+    //   records.json … 食事の情報（日付・種類・代表・写真ごとの撮影日時など）
+    //   photos/2026-11-24_lunch_1.jpg … 写真
     // =====================================================
     // パスワードはアプリに埋め込み（このアプリ以外では開けないようにするのが目的）。
     // ※ この文字列を変えると、それ以前のバックアップが読めなくなるので変更しないこと
@@ -1083,26 +1410,26 @@
     }
 
     $('export-btn').addEventListener('click', async () => {
-      const meals = await getAllMeals();
-      if (meals.length === 0) {
+      const slots = await getAllSlots();
+      if (slots.length === 0) {
         toast('バックアップする記録がありません');
         return;
       }
       toast('バックアップを作成中…', 0);
       try {
         const zip = new JSZip();
-        const list = meals.map((m) => ({
-          createdAt: m.createdAt,
-          eatenAt: m.eatenAt,
-          type: m.type,
-          photos: m.photos.map((p, i) => {
-            const file = `photos/${stamp(m.eatenAt)}_${m.id}_${i + 1}.jpg`;
+        const list = slots.map((s) => ({
+          day: s.day,
+          type: s.type,
+          cover: s.cover,
+          photos: s.photos.map((p, i) => {
+            const file = `photos/${s.day}_${s.type}_${i + 1}.jpg`;
             zip.file(file, p.blob); // JPEG は圧縮済みなので、そのまま入れる
             const { blob, ...info } = p;
             return { ...info, file };
           }),
         }));
-        zip.file('records.json', JSON.stringify({ app: 'meal-log', version: 2, meals: list }, null, 2), {
+        zip.file('records.json', JSON.stringify({ app: 'meal-log', version: 3, slots: list }, null, 2), {
           compression: 'DEFLATE',
         });
         const blob = await encryptBackup(await zip.generateAsync({ type: 'blob' }));
@@ -1115,7 +1442,8 @@
         a.download = name;
         a.click();
         setTimeout(() => URL.revokeObjectURL(url), 10000);
-        toast(`ダウンロードしました（${meals.length}食・${formatSize(blob.size)}）`, 4000);
+        const photoCount = slots.reduce((n, s) => n + s.photos.length, 0);
+        toast(`ダウンロードしました（写真${photoCount}枚・${formatSize(blob.size)}）`, 4000);
       } catch (e) {
         toast('バックアップに失敗しました：' + e.message, 5000);
       }
@@ -1141,46 +1469,44 @@
         if (!json) throw new Error('食事記録アプリのバックアップではありません');
         const data = JSON.parse(await json.async('string'));
 
-        // 新しい形式（食事単位）と、以前の形式（写真1枚=1件）の両方に対応
-        let incoming;
-        if (data.meals) {
-          incoming = data.meals;
+        // どの形式でも「日・種類・写真(file付き)」の並びにそろえる
+        let parts;
+        if (data.slots) {
+          parts = data.slots; // 今の形式
+        } else if (data.meals) {
+          parts = data.meals.map(fromV2Meal); // 食事単位だった形式
         } else if (data.records) {
-          incoming = data.records.map((r) => {
-            const meal = fromOldRecord(r, null);
-            meal.photos[0].file = r.file;
-            return meal;
+          parts = data.records.map((r) => {
+            const part = fromV1Record(r, null); // 写真1枚=1件だった形式
+            part.photos[0].file = r.file;
+            return part;
           });
         } else {
           throw new Error('食事記録アプリのバックアップではありません');
         }
 
-        // すでにある記録（同じ作成日時）は飛ばす → 何度読み込んでも重複しない
-        const existing = new Set((await getAllMeals()).map((m) => m.createdAt));
+        // すでにある写真（同じid）は飛ばす → 何度読み込んでも重複しない
+        const existing = new Set((await getAllSlots()).flatMap((s) => s.photos.map((p) => p.id)));
         let added = 0;
         let skipped = 0;
-        for (const m of incoming) {
-          if (existing.has(m.createdAt)) {
-            skipped++;
-            continue;
-          }
+        for (const part of parts) {
           const photos = [];
-          for (const p of m.photos) {
+          for (const p of part.photos) {
             const f = zip.file(p.file);
-            if (!f) continue;
+            if (existing.has(p.id) || !f) {
+              skipped++;
+              continue;
+            }
             const { file: _, ...info } = p;
             photos.push({ ...info, blob: new Blob([await f.async('arraybuffer')], { type: 'image/jpeg' }) });
+            existing.add(p.id);
           }
-          if (photos.length === 0) {
-            skipped++;
-            continue;
-          }
-          await putMeal({ createdAt: m.createdAt, eatenAt: m.eatenAt, type: m.type, photos });
-          existing.add(m.createdAt);
-          added++;
+          if (photos.length === 0) continue;
+          await addPhotosToSlot(part.day, part.type, photos, part.cover);
+          added += photos.length;
         }
-        toast(`読み込みました：追加 ${added}食` + (skipped ? `・重複などで飛ばした ${skipped}食` : ''), 4000);
-        await showList();
+        toast(`読み込みました：写真${added}枚を追加` + (skipped ? `・重複などで飛ばした ${skipped}枚` : ''), 4000);
+        refreshAll();
       } catch (e) {
         toast('読み込みに失敗しました：' + e.message, 5000);
       }
