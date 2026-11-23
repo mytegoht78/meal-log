@@ -29,11 +29,41 @@
       text-align: center;
       border-radius: 12px;
     }
-    #preview {
-      display: none;
-      width: 100%;
-      margin-top: 16px;
+    #status {
+      min-height: 1.5em;
+      margin: 8px 0;
+      font-size: 0.9em;
+      color: #888;
+      text-align: center;
+    }
+    .record {
+      background: #fff;
       border-radius: 12px;
+      margin-bottom: 16px;
+      overflow: hidden;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+    }
+    .record img {
+      display: block;
+      width: 100%;
+    }
+    .record-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+    }
+    .delete-btn {
+      border: none;
+      background: none;
+      color: #c44;
+      font-size: 0.9em;
+      padding: 8px;
+    }
+    .empty {
+      text-align: center;
+      color: #aaa;
+      margin-top: 32px;
     }
   </style>
 </head>
@@ -43,19 +73,117 @@
   <label for="camera" class="camera-btn">📷 写真を撮る</label>
   <input type="file" id="camera" accept="image/*" capture="environment">
 
-  <img id="preview" alt="撮った写真">
+  <div id="status"></div>
+  <div id="list"></div>
 
   <script>
-    const camera = document.getElementById('camera');
-    const preview = document.getElementById('preview');
+    // ===== IndexedDB の準備 =====
+    // データベース名 "meal-log"、その中に "records" という入れ物を作る
+    function openDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open('meal-log', 1);
+        req.onupgradeneeded = () => {
+          // 初回だけ実行される。id は自動で 1, 2, 3… と振られる
+          req.result.createObjectStore('records', { keyPath: 'id', autoIncrement: true });
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
 
-    // 写真が撮られたら（選ばれたら）画面に表示する
-    camera.addEventListener('change', () => {
+    // 入れ物に対して1回の操作をする共通関数
+    async function withStore(mode, action) {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction('records', mode);
+        const req = action(tx.objectStore('records'));
+        tx.oncomplete = () => resolve(req.result);
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    const addRecord = (record) => withStore('readwrite', (s) => s.add(record));
+    const getAllRecords = () => withStore('readonly', (s) => s.getAll());
+    const deleteRecord = (id) => withStore('readwrite', (s) => s.delete(id));
+
+    // ===== 写真の縮小 =====
+    // 長い辺を 1000px にして JPEG に変換（数MB → 100〜200KB 程度になる）
+    async function resizeImage(file, maxSize = 1000) {
+      const bitmap = await createImageBitmap(file);
+      const scale = Math.min(1, maxSize / Math.max(bitmap.width, bitmap.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(bitmap.width * scale);
+      canvas.height = Math.round(bitmap.height * scale);
+      canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      return new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.85));
+    }
+
+    // ===== 画面 =====
+    const camera = document.getElementById('camera');
+    const statusEl = document.getElementById('status');
+    const listEl = document.getElementById('list');
+    let shownUrls = [];
+
+    function formatDate(time) {
+      const d = new Date(time);
+      const week = '日月火水木金土'[d.getDay()];
+      const hh = String(d.getHours()).padStart(2, '0');
+      const mm = String(d.getMinutes()).padStart(2, '0');
+      return `${d.getMonth() + 1}/${d.getDate()}(${week}) ${hh}:${mm}`;
+    }
+
+    async function showList() {
+      // 前回表示した画像のURLを解放（メモリ節約）
+      shownUrls.forEach((url) => URL.revokeObjectURL(url));
+      shownUrls = [];
+
+      const records = await getAllRecords();
+      records.reverse(); // 新しい順
+
+      if (records.length === 0) {
+        listEl.innerHTML = '<p class="empty">まだ記録がありません</p>';
+        return;
+      }
+
+      listEl.innerHTML = '';
+      for (const r of records) {
+        const url = URL.createObjectURL(r.photo);
+        shownUrls.push(url);
+
+        const div = document.createElement('div');
+        div.className = 'record';
+        div.innerHTML = `
+          <img src="${url}" alt="食事の写真">
+          <div class="record-info">
+            <span>${formatDate(r.createdAt)}</span>
+            <button class="delete-btn">削除</button>
+          </div>`;
+        div.querySelector('.delete-btn').addEventListener('click', async () => {
+          if (!confirm('この記録を削除しますか？')) return;
+          await deleteRecord(r.id);
+          showList();
+        });
+        listEl.appendChild(div);
+      }
+    }
+
+    // 写真が撮られたら縮小して保存 → 一覧を更新
+    camera.addEventListener('change', async () => {
       const file = camera.files[0];
       if (!file) return;
-      preview.src = URL.createObjectURL(file);
-      preview.style.display = 'block';
+      statusEl.textContent = '保存中…';
+      try {
+        const photo = await resizeImage(file);
+        await addRecord({ createdAt: Date.now(), photo });
+        statusEl.textContent = '保存しました';
+        await showList();
+      } catch (e) {
+        statusEl.textContent = '保存に失敗しました：' + e.message;
+      }
+      camera.value = ''; // 同じ操作を続けてできるようにリセット
     });
+
+    showList();
   </script>
 </body>
 </html>
