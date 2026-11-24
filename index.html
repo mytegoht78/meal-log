@@ -2347,6 +2347,199 @@
       margin-top: -5px;
       border-radius: 50%;
     }
+
+    /* PC 用の部品（スマホでは出さない） */
+    .nav-add-label,
+    .pc-cols {
+      display: none;
+    }
+
+    /* =====================================================
+       PC で見たとき（横幅 1000px 以上）だけの見た目
+       スマホ（縦でも横でもこの幅に届かない）の見た目は変えない
+       ===================================================== */
+    @media (min-width: 1000px) {
+      body {
+        padding: 24px 40px 40px 228px; /* 左は縦メニューのぶん */
+      }
+      .page {
+        max-width: 1040px;
+        margin: 0 auto;
+      }
+
+      /* ボトムメニュー → 左の縦メニュー */
+      .bottom-nav {
+        top: 0;
+        right: auto;
+        width: 188px;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 2px;
+        padding: 18px 12px;
+        border-top: none;
+        border-right: 1px solid var(--card-line);
+      }
+      .bottom-nav::before {
+        content: '食事記録';
+        padding: 0 10px 14px;
+        color: var(--text);
+        font-size: 15px;
+        font-weight: bold;
+      }
+      .bottom-nav button,
+      .bottom-nav .nav-add {
+        flex: none;
+        flex-direction: row;
+        justify-content: flex-start;
+        gap: 10px;
+        width: auto;
+        height: auto;
+        margin: 0;
+        padding: 10px 12px;
+        border: none;
+        border-radius: 8px;
+        background: none;
+        color: var(--sub);
+        font-size: 14px;
+      }
+      .bottom-nav button .ico {
+        font-size: 20px;
+      }
+      .bottom-nav button.active {
+        background: var(--accent-soft);
+        color: var(--accent-ink);
+      }
+      .bottom-nav button:hover {
+        background: var(--chip-bg);
+      }
+      .bottom-nav button.active:hover {
+        background: var(--accent-soft);
+      }
+      /* カメラは下に小さく「写真を追加」 */
+      .bottom-nav .nav-add {
+        order: 10;
+        margin-top: auto;
+        border: 1px solid var(--line);
+        color: var(--ink3);
+      }
+      .bottom-nav .nav-add .ico {
+        color: var(--ink3);
+        font-size: 20px;
+      }
+      .bottom-nav .nav-add .nav-add-label {
+        display: inline;
+        font-size: 14px; /* 昔の「メニューの span（絵文字）を大きく・灰色に」の指定を打ち消す */
+        line-height: inherit;
+        opacity: 1;
+        filter: none;
+      }
+
+      /* ----- ホーム：上に年月と検索を1行、1日＝横1列 ----- */
+      #page-home.active {
+        display: grid;
+        grid-template-columns: 1fr 320px;
+        align-items: center;
+        column-gap: 16px;
+      }
+      #page-home .filter {
+        grid-row: 1;
+        grid-column: 1;
+        margin: 0;
+      }
+      #page-home .search {
+        grid-row: 1;
+        grid-column: 2;
+        margin: 0;
+      }
+      #page-home #list,
+      #page-home .pc-cols {
+        grid-column: 1 / -1;
+      }
+      .pc-cols,
+      .day {
+        display: grid;
+        grid-template-columns: 78px repeat(4, minmax(0, 1fr)) 190px;
+        column-gap: 10px;
+      }
+      .pc-cols {
+        margin-top: 14px;
+        padding: 0 13px 4px;
+        color: var(--sub);
+        font-size: 12px;
+      }
+      .day {
+        align-items: center;
+        margin-bottom: 8px;
+        padding: 10px 12px;
+      }
+      .day.is-today {
+        border-color: var(--accent-ring);
+      }
+      .day-grid {
+        display: contents; /* 4つのマスを横一列の列に並べる */
+      }
+      .day-head {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 3px;
+        margin: 0;
+      }
+      .dnum {
+        font-size: 28px;
+      }
+      .dmeta small {
+        display: none;
+      }
+      .day-edit {
+        width: 28px;
+        height: 28px;
+        margin: 2px 0 0;
+        font-size: 14px;
+      }
+      .day .cell-box .tile-label,
+      .day .cell-box.text .tile-label {
+        display: none; /* 列の見出しがあるので、マスの札は出さない */
+      }
+      .cell-box.text {
+        padding: 8px;
+      }
+      .hito {
+        align-self: stretch;
+        margin: 0;
+        padding: 0 4px;
+        border: none;
+        font-size: 13px;
+      }
+      .search-note,
+      #list .empty {
+        margin-top: 12px;
+      }
+
+      /* ----- アルバム・カレンダー・設定 ----- */
+      .album-grid {
+        grid-template-columns: repeat(6, 1fr);
+        gap: 6px;
+      }
+      #page-calendar.active {
+        max-width: 760px;
+        min-height: 0;
+      }
+      #page-settings.active {
+        max-width: 640px;
+      }
+
+      /* ----- 全画面の画面（編集・写真を追加）は中央の幅に ----- */
+      #day-editor,
+      #adder {
+        padding-left: calc(50% - 300px);
+        padding-right: calc(50% - 300px);
+      }
+      /* 下から出るシートも中央の幅に */
+      .sheet {
+        width: 480px;
+        margin: 0 auto;
+      }
+    }
   </style>
 </head>
 <body>
@@ -2361,6 +2554,8 @@
     <div class="filter">
       <button id="f-ym" class="ym-btn" aria-label="表示する年月を選ぶ"></button>
     </div>
+    <!-- PC で見たときだけ出す、列の見出し（スマホでは各マスに札を出す） -->
+    <div class="pc-cols" aria-hidden="true"><span></span><span>日記</span><span>朝食</span><span>昼食</span><span>夕食</span><span>ひとこと</span></div>
     <div id="list"></div>
   </section>
 
@@ -2442,7 +2637,7 @@
     <!-- data-icon の中身は起動時に線のアイコン（svgIcon）に置き換える -->
     <button data-page="home" class="active"><i data-icon="home"></i>ホーム</button>
     <button data-page="calendar"><i data-icon="calendar"></i>カレンダー</button>
-    <button id="nav-add" class="nav-add" aria-label="カメラで撮る"><i data-icon="camera"></i></button>
+    <button id="nav-add" class="nav-add" aria-label="カメラで撮る"><i data-icon="camera"></i><span class="nav-add-label">写真を追加</span></button>
     <button data-page="album"><i data-icon="photo"></i>アルバム</button>
     <button data-page="settings"><i data-icon="settings"></i>設定･情報</button>
   </nav>
@@ -4053,7 +4248,7 @@
       [...byDay.keys()].sort().reverse().forEach((day) => {
         const daySlots = byDay.get(day);
         const sec = document.createElement('section');
-        sec.className = 'day';
+        sec.className = 'day' + (day === today ? ' is-today' : '');
         // 日記帳のような日付：大きな日にち＋曜日と年月
         const dd = parseDay(day);
         sec.innerHTML = `
@@ -4554,7 +4749,11 @@
     }
 
     // 横向き表示（ボトムメニューの「カレンダー」をカレンダー画面でもう一度押すと切り替わる）
+    // PC（横幅1000px以上）の見た目に切り替わっているか
+    const isPC = () => matchMedia('(min-width: 1000px)').matches;
+
     function setCalendarLandscape(on) {
+      if (isPC()) on = false; // PC は画面が横長なので、横向き表示は使わない
       $('cal-land').classList.toggle('open', on);
       if (on) renderCalendar();
     }
