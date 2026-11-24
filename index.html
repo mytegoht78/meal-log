@@ -11,10 +11,6 @@
   <!-- ホーム画面に追加すると、アドレスバーのないアプリ画面で開く -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#faf5ec">
-  <!-- 文字（丸ゴシック） -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
   <!-- ZIP ファイルを作る・読むためのライブラリ -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <style>
@@ -45,8 +41,8 @@
       -webkit-tap-highlight-color: transparent;
     }
     body {
-      /* 丸ゴシックで手帳のようなやわらかさに（読み込めないときは端末の丸ゴシック・ゴシック） */
-      font-family: 'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', 'Hiragino Sans', sans-serif;
+      /* スマホ標準のゴシック（使い慣れた文字のまま） */
+      font-family: sans-serif;
       margin: 0;
       padding: 16px;
       background: var(--bg);
@@ -1802,6 +1798,274 @@
       color: #fff;
       font-size: 26px;
     }
+
+    /* =====================================================
+       あたたかい日記風：ほかの画面と共通の部品
+       ボタンは「主（オレンジ）／副（生成り＋枠）」の2種類、角の丸みは 12px（大）・8px（小）
+       ===================================================== */
+    .btn-main {
+      border-radius: 12px;
+      background: var(--accent);
+      font-weight: bold;
+    }
+    .btn-sub {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--card);
+      color: var(--text);
+    }
+    .backup-btn,
+    .camera-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border-radius: 12px;
+    }
+    .backup-btn {
+      padding: 12px;
+      border: 1px solid var(--line);
+      background: var(--card);
+      color: var(--text);
+    }
+    .camera-btn {
+      background: var(--accent);
+    }
+    .camera-btn.gallery {
+      border: 1px solid var(--line);
+      background: var(--card);
+      color: var(--text);
+    }
+    .camera-btn .ico,
+    .backup-btn .ico {
+      font-size: 20px;
+    }
+    .backup-btn .ico {
+      color: var(--sub);
+    }
+    .label {
+      color: var(--sub);
+    }
+    .note {
+      color: var(--ink2);
+    }
+    /* 入力欄 */
+    .date-input,
+    .ed-text,
+    .hito-input {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--card);
+      color: var(--text);
+    }
+    .date-input:focus,
+    .ed-text:focus,
+    .hito-input:focus,
+    .search input:focus {
+      border-color: var(--accent);
+      outline: 2px solid #f6d6bd;
+    }
+    select {
+      color: var(--text);
+    }
+    /* 種類のボタン（丸いチップ。アイコン付き） */
+    .types {
+      gap: 6px;
+    }
+    .type-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      padding: 9px 0;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: var(--card);
+      color: var(--ink2);
+      font-size: 0.9em;
+    }
+    .type-btn .ico {
+      font-size: 16px;
+    }
+    .type-btn.selected {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: #fff;
+    }
+    .wheel-band {
+      background: rgba(232, 131, 58, 0.08);
+    }
+    #toast {
+      background: rgba(74, 63, 53, 0.94);
+    }
+    mark {
+      background: #f7d9a8;
+    }
+
+    /* ----- 日の編集画面・写真を追加 ----- */
+    #day-editor,
+    #adder {
+      background: var(--bg);
+    }
+    .ed-top h2 {
+      font-size: 1.15em;
+    }
+    .ed-sec {
+      padding: 12px;
+      border: 1px solid var(--card-line);
+      border-radius: 16px;
+      background: var(--card);
+      box-shadow: none;
+    }
+    .ed-head {
+      gap: 6px;
+      color: var(--text);
+    }
+    .ed-head > .ico {
+      color: var(--accent);
+      font-size: 18px;
+    }
+    .ed-add {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      padding: 5px 12px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--card);
+      color: var(--ink2);
+    }
+    .ed-none {
+      color: var(--sub);
+    }
+    .ed-photo img {
+      border-radius: 10px;
+    }
+    .ed-tool {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-color: var(--line);
+      border-radius: 8px;
+      background: var(--card);
+      color: var(--sub);
+    }
+    .ed-tool .ico {
+      font-size: 17px;
+    }
+    .ed-tool.star-tool.on .ico {
+      fill: currentColor; /* メイン写真は★を塗りつぶす */
+    }
+    .ed-tool.cal-tool {
+      opacity: 1;
+      filter: none;
+    }
+    .ed-tool.cal-tool.on {
+      border-color: var(--accent);
+      background: #fbeadb;
+      color: var(--accent);
+    }
+    .add-slot {
+      border-radius: 12px;
+    }
+    .add-slot.empty {
+      border: none;
+      background: var(--tile);
+      color: #cbbba6;
+    }
+    .add-slot .new {
+      background: var(--accent);
+    }
+
+    /* ----- カレンダー ----- */
+    .cal-week .sun,
+    .cal-day.sun .cal-num,
+    #cal-grid .cal-day.sun .cal-num {
+      color: #c8553d;
+    }
+    .cal-week .sat,
+    .cal-day.sat .cal-num,
+    #cal-grid .cal-day.sat .cal-num {
+      color: #4a76a8;
+    }
+    .cal-day {
+      border-radius: 8px;
+      background: var(--card);
+    }
+    .cal-actions .backup-btn {
+      display: inline-flex;
+    }
+
+    /* ----- アルバム：チェックを丸いチップに ----- */
+    .album-checks {
+      gap: 6px;
+    }
+    .album-checks label {
+      gap: 4px;
+      padding: 6px 12px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--card);
+      color: var(--ink2);
+      font-size: 0.88em;
+      cursor: pointer;
+    }
+    .album-checks input {
+      display: none;
+    }
+    .album-checks label:has(input:checked) {
+      border-color: var(--accent);
+      background: #fbeadb;
+      color: #b8611f;
+    }
+    .album-grid {
+      gap: 3px;
+      margin: 0;
+    }
+    .album-item {
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    /* ----- 設定･情報 ----- */
+    .set-group {
+      padding: 14px;
+      border: 1px solid var(--card-line);
+      border-radius: 16px;
+      background: var(--card);
+      box-shadow: none;
+    }
+    .set-title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .set-title .ico {
+      color: var(--accent);
+      font-size: 18px;
+    }
+    .set-radio > .ico {
+      color: var(--sub);
+      font-size: 20px;
+    }
+    .set-time-name {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .set-time-name .ico {
+      color: var(--sub);
+      font-size: 18px;
+    }
+    .set-time select {
+      border-color: var(--line);
+      border-radius: 8px;
+      background: var(--card);
+    }
+    .info-body th,
+    .info-body td {
+      border-top-color: var(--line);
+    }
   </style>
 </head>
 <body>
@@ -1858,31 +2122,33 @@
   <!-- 設定 -->
   <section id="page-settings" class="page">
     <div class="set-group">
-      <div class="set-title">使うカメラ</div>
+      <div class="set-title"><i data-icon="camera"></i>使うカメラ</div>
       <label class="set-radio">
         <input type="radio" name="camera" value="quiet">
-        <span>🔇 静音カメラ<small>音なし・横4：縦3</small></span>
+        <i data-icon="mute"></i>
+        <span>静音カメラ<small>音なし・横4：縦3</small></span>
       </label>
       <label class="set-radio">
         <input type="radio" name="camera" value="app">
-        <span>📷 きれいなカメラ<small>スマホのカメラアプリ・シャッター音あり</small></span>
+        <i data-icon="camera"></i>
+        <span>きれいなカメラ<small>スマホのカメラアプリ・シャッター音あり</small></span>
       </label>
     </div>
     <div class="set-group">
-      <div class="set-title">食事の時間帯</div>
-      <div class="set-time" data-meal="breakfast">🌅 朝食<span><select class="t-start"></select>時 〜 <select class="t-end"></select>時</span></div>
-      <div class="set-time" data-meal="lunch">☀️ 昼食<span><select class="t-start"></select>時 〜 <select class="t-end"></select>時</span></div>
-      <div class="set-time" data-meal="dinner">🌙 夕食<span><select class="t-start"></select>時 〜 <select class="t-end"></select>時</span></div>
+      <div class="set-title"><i data-icon="clock"></i>食事の時間帯</div>
+      <div class="set-time" data-meal="breakfast"><span class="set-time-name"><i data-icon="sunrise"></i>朝食</span><span><select class="t-start"></select>時 〜 <select class="t-end"></select>時</span></div>
+      <div class="set-time" data-meal="lunch"><span class="set-time-name"><i data-icon="sun"></i>昼食</span><span><select class="t-start"></select>時 〜 <select class="t-end"></select>時</span></div>
+      <div class="set-time" data-meal="dinner"><span class="set-time-name"><i data-icon="moon"></i>夕食</span><span><select class="t-start"></select>時 〜 <select class="t-end"></select>時</span></div>
       <p class="set-note">撮影した時刻から種類を自動で選ぶときに使います。どれにも入らない時刻は「日記」になります。</p>
     </div>
     <div class="set-group">
-      <div class="set-title">情報</div>
+      <div class="set-title"><i data-icon="info"></i>情報</div>
       <div id="info-body" class="info-body"></div>
     </div>
     <div class="set-group">
-      <div class="set-title">バックアップ</div>
-      <button id="export-btn" class="backup-btn">💾 バックアップを保存</button>
-      <label for="import-file" class="backup-btn">📂 バックアップを読み込む</label>
+      <div class="set-title"><i data-icon="download"></i>バックアップ</div>
+      <button id="export-btn" class="backup-btn"><i data-icon="download"></i>バックアップを保存</button>
+      <label for="import-file" class="backup-btn"><i data-icon="upload"></i>バックアップを読み込む</label>
       <p class="set-note">保存したファイル（.mlbk）は「ダウンロード」に入ります。OneDriveアプリでアップロードしておくと、PCのChromeでこのアプリを開いて読み込めます。</p>
     </div>
   </section>
@@ -1909,8 +2175,8 @@
       <h2>写真を追加</h2>
     </div>
     <div class="add-btns">
-      <button id="adder-camera" class="camera-btn">📷 カメラ起動</button>
-      <button id="adder-gallery" class="camera-btn gallery">🖼 ギャラリーから</button>
+      <button id="adder-camera" class="camera-btn"><i data-icon="camera"></i>カメラ起動</button>
+      <button id="adder-gallery" class="camera-btn gallery"><i data-icon="photo"></i>ギャラリーから</button>
     </div>
     <div id="adder-slots" class="add-slots"></div>
     <div id="adder-note" class="note"></div>
@@ -2064,6 +2330,18 @@
       pencil: '<path d="M5 19l1-4L16 5l3 3L9 18z"/><path d="M14 7l3 3"/>',
       plus: '<path d="M12 6v12M6 12h12"/>',
       feather: '<path d="M19 5c-6 0-11 4-11 11v3"/><path d="M8 15c5 0 9-3 11-10"/><path d="M8 11h5"/>',
+      // 種類（日記・朝食・昼食・夕食）
+      book: '<path d="M4.5 5h5a2.5 2.5 0 0 1 2.5 2.5V20a2 2 0 0 0-2-2H4.5z"/><path d="M19.5 5h-5A2.5 2.5 0 0 0 12 7.5V20a2 2 0 0 1 2-2h5.5z"/>',
+      sunrise: '<path d="M3.5 17h17"/><path d="M7 17a5 5 0 0 1 10 0"/><path d="M12 5.5v3M5.6 9.6l1.8 1.8M18.4 9.6l-1.8 1.8M8 20.5h8"/>',
+      sun: '<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6L7 7M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/>',
+      moon: '<path d="M19.5 14.5A7.5 7.5 0 0 1 9.5 4.5a7.5 7.5 0 1 0 10 10z"/>',
+      // そのほか
+      star: '<path d="M12 4l2.4 5 5.4.7-4 3.8 1 5.4L12 16.3l-4.8 2.6 1-5.4-4-3.8 5.4-.7z"/>',
+      mute: '<path d="M4.5 9.5h3l4.5-4v13l-4.5-4h-3z"/><path d="M16 9.5l4 5M20 9.5l-4 5"/>',
+      download: '<path d="M12 4v11M7.5 10.5L12 15l4.5-4.5"/><path d="M5 19.5h14"/>',
+      upload: '<path d="M12 15V4M7.5 8.5L12 4l4.5 4.5"/><path d="M5 19.5h14"/>',
+      clock: '<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>',
+      info: '<circle cx="12" cy="12" r="8"/><path d="M12 11v5M12 8h.01"/>',
     };
     function svgIcon(name) {
       return `<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" ` +
@@ -2073,14 +2351,14 @@
     const pad = (n) => String(n).padStart(2, '0');
 
     const TYPES = {
-      diary: { label: '日記', icon: '📔' },
-      breakfast: { label: '朝食', icon: '🌅' },
-      lunch: { label: '昼食', icon: '☀️' },
-      dinner: { label: '夕食', icon: '🌙' },
+      diary: { label: '日記', icon: 'book' }, // icon は svgIcon の名前
+      breakfast: { label: '朝食', icon: 'sunrise' },
+      lunch: { label: '昼食', icon: 'sun' },
+      dinner: { label: '夕食', icon: 'moon' },
     };
     const TYPE_ORDER = ['diary', 'breakfast', 'lunch', 'dinner'];
     const MEMO = 'memo'; // ひとこと（1日1つ。写真なしの文字だけ）
-    const SOURCE_ICON = { app: '📷', quiet: '🔇', gallery: '🖼' };
+    const SOURCE_ICON = { app: 'カメラ', quiet: '静音カメラ', gallery: 'ギャラリー' }; // 拡大表示の撮り方の表示
     // 以前の「間食」は「日記」になった
     const normType = (t) => (t === 'snack' ? 'diary' : t);
     const MAX_PHOTOS = 3; // 日記・食事ごとの写真の上限
@@ -2936,7 +3214,7 @@
       for (const key of TYPE_ORDER) {
         const b = document.createElement('button');
         b.className = 'type-btn' + (adder.type === key ? ' selected' : '');
-        b.textContent = `${TYPES[key].icon} ${TYPES[key].label}`;
+        b.innerHTML = `${svgIcon(TYPES[key].icon)}${TYPES[key].label}`;
         b.addEventListener('click', () => {
           adder.picked = true;
           adder.type = key;
@@ -3033,8 +3311,8 @@
         sec.dataset.type = type; // ドラッグ＆ドロップの落とし先
         sec.dataset.count = count;
         sec.innerHTML = `
-          <div class="ed-head">${TYPES[type].icon} ${TYPES[type].label}
-            <button class="ed-add">＋追加</button>
+          <div class="ed-head">${svgIcon(TYPES[type].icon)}${TYPES[type].label}
+            <button class="ed-add">${svgIcon('plus')}追加</button>
           </div>`;
         sec.querySelector('.ed-add').addEventListener('click', () => openAdder(day, type));
 
@@ -3053,9 +3331,9 @@
                 <button class="remove" aria-label="削除">×</button>
               </div>
               <div class="ed-tools">
-                <button class="ed-tool star-tool${isCover ? ' on' : ''}" aria-label="メインにする">${isCover ? '★' : '☆'}</button>
+                <button class="ed-tool star-tool${isCover ? ' on' : ''}" aria-label="${isCover ? 'メイン写真' : 'メインにする'}">${svgIcon('star')}</button>
                 <button class="ed-tool fav-tool"></button>
-                <button class="ed-tool cal-tool${p.cal ? ' on' : ''}" aria-label="${p.cal ? 'カレンダー写真をやめる' : 'カレンダー写真にする'}">📅</button>
+                <button class="ed-tool cal-tool${p.cal ? ' on' : ''}" aria-label="${p.cal ? 'カレンダー写真をやめる' : 'カレンダー写真にする'}">${svgIcon('calendar')}</button>
               </div>`;
             const fav = div.querySelector('.fav-tool');
             setFavButton(fav, p.fav);
@@ -3091,7 +3369,7 @@
       const memo = slots.find((s) => s.type === MEMO);
       const sec = document.createElement('section');
       sec.className = 'ed-sec';
-      sec.innerHTML = '<div class="ed-head">💬 ひとこと</div>';
+      sec.innerHTML = `<div class="ed-head">${svgIcon('feather')}ひとこと</div>`;
       sec.appendChild(makeTextInput(day, MEMO, memo?.text, '例：公園に遊びに行った'));
       body.appendChild(sec);
     }
