@@ -2,6 +2,9 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
+  <!-- 通信制限：自分のファイルと、サンプル表示の写真（Unsplash）以外との通信をブラウザに止めさせる。
+       外部のサービスを使う機能を足すときは、ここに許可先を足す -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob: https://images.unsplash.com; connect-src 'self' data: blob: https://images.unsplash.com; media-src 'self' blob:; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <title>食事記録アプリ</title>
@@ -26,8 +29,8 @@
   <!-- ホーム画面に追加すると、アドレスバーのないアプリ画面で開く -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#faf5ec">
-  <!-- ZIP ファイルを作る・読むためのライブラリ -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <!-- ZIP ファイルを作る・読むためのライブラリ（JSZip 3.10.1。外部の改ざん・停止の影響を受けないよう同梱） -->
+  <script src="vendor/jszip-3.10.1.min.js"></script>
   <style>
     /* 色（あたたかい日記風）：メイン1色＋生成りの背景・カード＋こげ茶の文字 */
     :root {
