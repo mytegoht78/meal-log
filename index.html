@@ -1273,20 +1273,44 @@
     .crop-top .back-btn {
       color: #fff;
     }
+    /* 「移動のみ／大きさも変える」の切り替え */
+    .crop-modes {
+      display: flex;
+      align-self: center;
+      margin-bottom: 10px;
+      border: 1px solid #555;
+      border-radius: 18px;
+      overflow: hidden;
+    }
+    .crop-modes button {
+      padding: 7px 16px;
+      border: none;
+      background: none;
+      color: #bbb;
+      font-size: 0.9em;
+    }
+    .crop-modes button.on {
+      background: var(--accent);
+      color: #fff;
+      font-weight: bold;
+    }
     .crop-stage {
       position: relative;
       flex: 1;
       min-height: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
       overflow: hidden;
       touch-action: none;
+      /* 写真の外（はみ出すと白になる部分）は少し明るい灰色で見せる */
+      background: #2a2a2a;
+    }
+    /* 大きさも変えるとき、枠を広げられる範囲（写真の外は白で保存される） */
+    #crop-area {
+      position: absolute;
+      background: #fff;
     }
     #crop-img {
+      position: absolute;
       display: block;
-      max-width: 100%;
-      max-height: 100%;
       user-select: none;
       -webkit-user-drag: none;
       pointer-events: none;
@@ -1297,6 +1321,36 @@
       border: 2px solid #fff;
       box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6);
       pointer-events: none;
+    }
+    /* 角のつまみ（大きさも変えるのときだけ） */
+    #crop-frame span {
+      display: none;
+      position: absolute;
+      width: 26px;
+      height: 26px;
+      border: 3px solid var(--accent);
+      border-radius: 50%;
+      background: #fff;
+      pointer-events: auto;
+    }
+    #crop-frame.resizable span {
+      display: block;
+    }
+    #crop-frame [data-corner="tl"] {
+      left: -14px;
+      top: -14px;
+    }
+    #crop-frame [data-corner="tr"] {
+      right: -14px;
+      top: -14px;
+    }
+    #crop-frame [data-corner="bl"] {
+      left: -14px;
+      bottom: -14px;
+    }
+    #crop-frame [data-corner="br"] {
+      right: -14px;
+      bottom: -14px;
     }
     .crop-hint {
       margin: 10px 0 0;
@@ -1550,11 +1604,19 @@
       <button id="crop-back" class="back-btn" aria-label="この写真をやめる">←</button>
       <h2 id="crop-title">写真を切り抜く</h2>
     </div>
-    <div id="crop-stage" class="crop-stage">
-      <img id="crop-img" alt="切り抜く写真" draggable="false">
-      <div id="crop-frame"></div>
+    <div class="crop-modes">
+      <button data-crop-mode="move">移動のみ</button>
+      <button data-crop-mode="resize">大きさも変える</button>
     </div>
-    <p class="crop-hint">枠を指で動かして、残す部分を選んでください</p>
+    <div id="crop-stage" class="crop-stage">
+      <div id="crop-area"></div>
+      <img id="crop-img" alt="切り抜く写真" draggable="false">
+      <div id="crop-frame">
+        <span data-corner="tl"></span><span data-corner="tr"></span>
+        <span data-corner="bl"></span><span data-corner="br"></span>
+      </div>
+    </div>
+    <p id="crop-hint" class="crop-hint"></p>
     <div class="actions crop-actions">
       <button id="crop-orig" class="btn-sub">元のまま</button>
       <button id="crop-ok" class="btn-main">4:3で切り抜く</button>
@@ -2241,37 +2303,92 @@
       });
     }
 
-    // 表示された画像に合わせて、できるだけ大きな 4:3 の枠を真ん中に置く
+    // 切り抜き方（スマホに記憶）
+    //   move   … 移動のみ：写真の中でいちばん大きな 4:3 の枠を動かす
+    //   resize … 大きさも変える：角のつまみで大きさを変えられ、写真からはみ出した部分は白になる
+    let cropMode = 'move';
+    try {
+      if (localStorage.getItem('meal-log-crop-mode') === 'resize') cropMode = 'resize';
+    } catch {
+      // 読めなければ「移動のみ」
+    }
+    document.querySelectorAll('[data-crop-mode]').forEach((b) => {
+      b.addEventListener('click', () => {
+        cropMode = b.dataset.cropMode;
+        try {
+          localStorage.setItem('meal-log-crop-mode', cropMode);
+        } catch {
+          // 保存できなくても今回は使える
+        }
+        layoutCropFrame();
+      });
+    });
+
+    // 座標は「写真の実寸（向き反映後）」で持つ。
+    //   area  … 枠が動ける範囲（移動のみ＝写真そのもの、大きさも変える＝写真全体が入る 4:3 の範囲）
+    //   frame … 枠（4:3）
+    //   view  … 表示の倍率 s と、写真の左上の表示位置 ox, oy
     function layoutCropFrame() {
       if (!cropState) return;
+      document.querySelectorAll('[data-crop-mode]').forEach((b) => b.classList.toggle('on', b.dataset.cropMode === cropMode));
+      $('crop-frame').classList.toggle('resizable', cropMode === 'resize');
+      $('crop-hint').textContent = cropMode === 'resize'
+        ? '枠を動かす／角のつまみで大きさを変える（はみ出した部分は白になります）'
+        : '枠を指で動かして、残す部分を選んでください';
+
       const img = $('crop-img');
-      const stage = $('crop-stage').getBoundingClientRect();
-      const r = img.getBoundingClientRect();
-      const w = r.width;
-      const h = r.height;
-      const fw = w / h > 4 / 3 ? h * (4 / 3) : w;
+      const W = img.naturalWidth;
+      const H = img.naturalHeight;
+      let area;
+      if (cropMode === 'resize') {
+        const aw = Math.max(W, H * (4 / 3));
+        const ah = aw * (3 / 4);
+        area = { x: (W - aw) / 2, y: (H - ah) / 2, w: aw, h: ah };
+      } else {
+        area = { x: 0, y: 0, w: W, h: H };
+      }
+      // 動ける範囲が画面に収まる倍率で表示する（角のつまみが切れないよう少し余白をとる）
+      const stage = $('crop-stage');
+      const m = 16;
+      const s = Math.min((stage.clientWidth - m * 2) / area.w, (stage.clientHeight - m * 2) / area.h);
+      const ox = (stage.clientWidth - area.w * s) / 2 - area.x * s;
+      const oy = (stage.clientHeight - area.h * s) / 2 - area.y * s;
+      img.style.width = W * s + 'px';
+      img.style.height = H * s + 'px';
+      img.style.left = ox + 'px';
+      img.style.top = oy + 'px';
+      const areaEl = $('crop-area');
+      areaEl.style.display = cropMode === 'resize' ? '' : 'none';
+      areaEl.style.left = ox + area.x * s + 'px';
+      areaEl.style.top = oy + area.y * s + 'px';
+      areaEl.style.width = area.w * s + 'px';
+      areaEl.style.height = area.h * s + 'px';
+      // 最初の枠：写真の中でいちばん大きな 4:3 を真ん中に
+      const fw = W / H > 4 / 3 ? H * (4 / 3) : W;
       const fh = fw * (3 / 4);
-      cropState.box = { left: r.left - stage.left, top: r.top - stage.top, w, h };
-      cropState.frame = { x: (w - fw) / 2, y: (h - fh) / 2, w: fw, h: fh };
-      cropState.scale = img.naturalWidth / w;
+      cropState.area = area;
+      cropState.view = { s, ox, oy };
+      cropState.frame = { x: (W - fw) / 2, y: (H - fh) / 2, w: fw, h: fh };
       drawCropFrame();
     }
     function drawCropFrame() {
-      const { box, frame } = cropState;
+      const { frame, view } = cropState;
       const el = $('crop-frame');
-      el.style.left = box.left + frame.x + 'px';
-      el.style.top = box.top + frame.y + 'px';
-      el.style.width = frame.w + 'px';
-      el.style.height = frame.h + 'px';
+      el.style.left = view.ox + frame.x * view.s + 'px';
+      el.style.top = view.oy + frame.y * view.s + 'px';
+      el.style.width = frame.w * view.s + 'px';
+      el.style.height = frame.h * view.s + 'px';
     }
 
-    // 枠のドラッグ（画像の外には出ない）
+    // 枠の中をドラッグで移動、角のつまみ（大きさも変えるのとき）で 4:3 のまま大きさを変える
     {
       let start = null;
       const stage = $('crop-stage');
       stage.addEventListener('pointerdown', (e) => {
         if (!cropState?.frame) return;
-        start = { x: e.clientX, y: e.clientY, fx: cropState.frame.x, fy: cropState.frame.y };
+        const handle = e.target.closest('[data-corner]');
+        const f = cropState.frame;
+        start = { x: e.clientX, y: e.clientY, frame: { ...f }, corner: handle?.dataset.corner || null };
         try {
           stage.setPointerCapture(e.pointerId);
         } catch {
@@ -2280,9 +2397,30 @@
       });
       stage.addEventListener('pointermove', (e) => {
         if (!start || !cropState) return;
-        const { box, frame } = cropState;
-        frame.x = Math.min(box.w - frame.w, Math.max(0, start.fx + e.clientX - start.x));
-        frame.y = Math.min(box.h - frame.h, Math.max(0, start.fy + e.clientY - start.y));
+        const { area, view, frame } = cropState;
+        const dx = (e.clientX - start.x) / view.s;
+        const dy = (e.clientY - start.y) / view.s;
+        const f0 = start.frame;
+        if (!start.corner) {
+          frame.x = Math.min(area.x + area.w - frame.w, Math.max(area.x, f0.x + dx));
+          frame.y = Math.min(area.y + area.h - frame.h, Math.max(area.y, f0.y + dy));
+        } else {
+          // 反対側の角を固定して、4:3 のまま広げる・縮める
+          const sx = start.corner.includes('r') ? 1 : -1;
+          const sy = start.corner.includes('b') ? 1 : -1;
+          const ax = sx > 0 ? f0.x : f0.x + f0.w;
+          const ay = sy > 0 ? f0.y : f0.y + f0.h;
+          let w = Math.max(f0.w + dx * sx, (f0.h + dy * sy) * (4 / 3));
+          const maxW = Math.min(
+            sx > 0 ? area.x + area.w - ax : ax - area.x,
+            (sy > 0 ? area.y + area.h - ay : ay - area.y) * (4 / 3));
+          w = Math.max(area.w * 0.15, Math.min(maxW, w));
+          const h = w * (3 / 4);
+          frame.w = w;
+          frame.h = h;
+          frame.x = sx > 0 ? ax : ax - w;
+          frame.y = sy > 0 ? ay : ay - h;
+        }
         drawCropFrame();
       });
       const end = () => (start = null);
@@ -2295,8 +2433,7 @@
       if (!cropState) return;
       const s = cropState;
       s.done = true;
-      const { frame, scale } = s;
-      const rect = { x: frame.x * scale, y: frame.y * scale, w: frame.w * scale, h: frame.h * scale };
+      const rect = { ...s.frame };
       await closeLayer();
       s.resolve(mode === 'crop' ? { mode, rect } : { mode });
     }
@@ -2304,14 +2441,18 @@
     $('crop-orig').addEventListener('click', () => finishCrop('orig'));
     $('crop-back').addEventListener('click', closeLayer);
 
-    // 選んだ範囲を切り抜いたキャンバス（長い辺1000pxまで）を作る
+    // 選んだ範囲を切り抜いたキャンバス（長い辺1000pxまで）を作る。写真の外は白
     async function cropToCanvas(file, rect) {
       const bitmap = await createImageBitmap(file); // 写真の向き（EXIF）を反映した画像
-      const scale = Math.min(1, 1000 / Math.max(rect.w, rect.h));
+      const k = Math.min(1, 1000 / Math.max(rect.w, rect.h));
       const canvas = document.createElement('canvas');
-      canvas.width = Math.round(rect.w * scale);
-      canvas.height = Math.round(rect.h * scale);
-      canvas.getContext('2d').drawImage(bitmap, rect.x, rect.y, rect.w, rect.h, 0, 0, canvas.width, canvas.height);
+      canvas.width = Math.round(rect.w * k);
+      canvas.height = Math.round(rect.h * k);
+      const g = canvas.getContext('2d');
+      g.fillStyle = '#fff';
+      g.fillRect(0, 0, canvas.width, canvas.height);
+      // 写真全体を、枠の左上が (0,0) になる位置に描く（はみ出した部分は白のまま）
+      g.drawImage(bitmap, -rect.x * k, -rect.y * k, bitmap.width * k, bitmap.height * k);
       bitmap.close();
       return canvas;
     }
