@@ -2348,6 +2348,75 @@
       border-radius: 50%;
     }
 
+    /* バックアップの読み込み方を選ぶシート */
+    .imp-compare {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .imp-box {
+      padding: 10px;
+      border: 1px solid var(--card-line);
+      border-radius: 8px;
+      background: var(--card);
+    }
+    .imp-title {
+      margin-bottom: 4px;
+      color: var(--sub);
+      font-size: 0.8em;
+    }
+    .imp-box b {
+      display: block;
+      font-size: 0.95em;
+    }
+    .imp-box small {
+      color: var(--sub);
+      font-size: 0.75em;
+    }
+    .imp-choice {
+      display: block;
+      width: 100%;
+      margin-top: 8px;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--card);
+      color: var(--text);
+      text-align: left;
+    }
+    .imp-choice b {
+      display: block;
+      margin-bottom: 3px;
+      font-size: 1em;
+    }
+    .imp-choice small {
+      display: block;
+      color: var(--ink2);
+      font-size: 0.8em;
+      line-height: 1.5;
+    }
+    #imp-add {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+    #imp-add b {
+      color: var(--accent-ink);
+    }
+    /* 置き換えたあとに出る「元に戻す」 */
+    .undo-box {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+    }
+    .undo-box p {
+      margin: 0 0 6px;
+      color: var(--ink2);
+      font-size: 0.85em;
+      line-height: 1.5;
+    }
+
     /* PC 用の部品（スマホでは出さない） */
     .nav-add-label,
     .pc-cols {
@@ -2629,6 +2698,11 @@
       <div class="set-title"><i data-icon="download"></i>バックアップ</div>
       <button id="export-btn" class="backup-btn"><i data-icon="download"></i>バックアップを保存</button>
       <label for="import-file" class="backup-btn"><i data-icon="upload"></i>バックアップを読み込む</label>
+      <!-- 置き換えたあとだけ出る -->
+      <div id="undo-box" class="undo-box" hidden>
+        <p id="undo-text"></p>
+        <button id="undo-btn" class="backup-btn">元に戻す</button>
+      </div>
       <p class="set-note">保存したファイル（.mlbk）は「ダウンロード」に入ります。OneDriveアプリでアップロードしておくと、PCのChromeでこのアプリを開いて読み込めます。</p>
     </div>
   </section>
@@ -2732,6 +2806,28 @@
       <div class="actions">
         <button id="ym-cancel" class="btn-sub">キャンセル</button>
         <button id="ym-ok" class="btn-main">決定</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- バックアップの読み込み方を選ぶ -->
+  <div id="import-sheet" class="overlay sheet-overlay" style="z-index:16">
+    <div class="sheet">
+      <h2>バックアップの読み込み</h2>
+      <div class="imp-compare">
+        <div class="imp-box"><div class="imp-title">バックアップ</div><div id="imp-backup"></div></div>
+        <div class="imp-box"><div class="imp-title">今のデータ</div><div id="imp-current"></div></div>
+      </div>
+      <button id="imp-add" class="imp-choice">
+        <b>追加だけ（安全）</b>
+        <small>今のデータはそのまま。バックアップにあって、こちらにない写真や文字だけを足します。何度読み込んでも重複しません。</small>
+      </button>
+      <button id="imp-replace" class="imp-choice">
+        <b>置き換える（最新版にする）</b>
+        <small>今のデータを、バックアップと同じ内容にします。削除や変更も反映されます。置き換える前の状態は「元に戻す」で1回だけ戻せます。</small>
+      </button>
+      <div class="actions">
+        <button id="imp-cancel" class="btn-sub">キャンセル</button>
       </div>
     </div>
   </div>
@@ -4720,6 +4816,7 @@
     // =====================================================
     async function renderInfo() {
       if (!$('page-settings').classList.contains('active')) return;
+      renderUndo();
       const all = await getAllSlots();
       const sum = (slots) => ({
         days: new Set(slots.map((s) => s.day)).size,
@@ -4983,7 +5080,7 @@
             return { ...info, file };
           }),
         }));
-        zip.file('records.json', JSON.stringify({ app: 'meal-log', version: 4, slots: list }, null, 2), {
+        zip.file('records.json', JSON.stringify({ app: 'meal-log', version: 4, createdAt: Date.now(), slots: list }, null, 2), {
           compression: 'DEFLATE',
         });
         const blob = await encryptBackup(await zip.generateAsync({ type: 'blob' }));
@@ -5002,6 +5099,16 @@
         toast('バックアップに失敗しました：' + e.message, 5000);
       }
     });
+
+    // =====================================================
+    // バックアップの読み込み
+    //   1. ファイルを解読して中身を確かめる
+    //   2. 「バックアップ」と「今のデータ」を見比べて、読み込み方を選ぶ
+    //      ・追加だけ（安全）… 今のデータは減らさず、こちらにない写真・文字だけ足す
+    //      ・置き換える      … バックアップと同じ内容にする（削除や変更も反映）
+    //   3. 置き換える前の状態は、アプリ内に1回分だけ残し「元に戻す」で戻せる
+    // =====================================================
+    let pendingImport = null; // { zip, parts, savedAt, fromFileDate }
 
     const importFile = $('import-file');
     importFile.addEventListener('change', async () => {
@@ -5038,8 +5145,68 @@
         } else {
           throw new Error('食事記録アプリのバックアップではありません');
         }
+        // 保存した日時（古いバックアップには無いので、ファイルの日時で代わりにする）
+        pendingImport = { zip, parts, savedAt: data.createdAt || file.lastModified, fromFileDate: !data.createdAt };
+        toast('', 1);
+        await openImportSheet();
+      } catch (e) {
+        toast('読み込みに失敗しました：' + e.message, 5000);
+      }
+    });
 
-        // すでにある写真（同じid）は飛ばす → 何度読み込んでも重複しない
+    // 日数・写真の枚数（写真か文字がある日を数える）
+    function countData(slots) {
+      return {
+        days: new Set(slots.filter((s) => s.photos.length || s.text).map((s) => s.day)).size,
+        photos: slots.reduce((n, s) => n + s.photos.length, 0),
+      };
+    }
+    function formatStamp(time) {
+      const d = new Date(time);
+      return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${pad(d.getMinutes())}`;
+    }
+
+    async function openImportSheet() {
+      const p = pendingImport;
+      const backup = countData(p.parts);
+      const current = countData(await getAllSlots());
+      $('imp-backup').innerHTML =
+        `<b>${backup.days}日分・写真${backup.photos}枚</b><small>${formatStamp(p.savedAt)} ${p.fromFileDate ? 'ごろ' : ''}保存</small>`;
+      $('imp-current').innerHTML = `<b>${current.days}日分・写真${current.photos}枚</b><small>このスマホ／PC</small>`;
+      openLayer($('import-sheet'), { onClose: () => (pendingImport = null) });
+    }
+    async function takePendingImport() {
+      const p = pendingImport; // 閉じると消えるので先に取っておく
+      await closeLayer();
+      return p;
+    }
+    $('imp-cancel').addEventListener('click', closeLayer);
+    $('imp-add').addEventListener('click', async () => {
+      const p = await takePendingImport();
+      if (p) importAdd(p);
+    });
+    $('imp-replace').addEventListener('click', async () => {
+      const backup = countData(pendingImport.parts);
+      const current = countData(await getAllSlots());
+      if (!confirm(`今のデータ（${current.days}日分・写真${current.photos}枚）を、` +
+        `バックアップの内容（${backup.days}日分・写真${backup.photos}枚）に置き換えます。\n` +
+        '置き換える前の状態は、設定･情報の「元に戻す」で1回だけ戻せます。よろしいですか？')) return;
+      const p = await takePendingImport();
+      if (p) importReplace(p);
+    });
+
+    // 写真ファイルを取り出す（見つからなければ null）
+    async function readPhoto(zip, p) {
+      const f = zip.file(p.file);
+      if (!f) return null;
+      const { file: _, ...info } = p;
+      return { ...info, blob: new Blob([await f.async('arraybuffer')], { type: 'image/jpeg' }) };
+    }
+
+    // 追加だけ（安全）：すでにある写真（同じid）は飛ばす → 何度読み込んでも重複しない
+    async function importAdd({ zip, parts }) {
+      toast('読み込み中…', 0);
+      try {
         const existing = new Set((await getAllSlots()).flatMap((s) => s.photos.map((p) => p.id)));
         let added = 0;
         let skipped = 0;
@@ -5050,13 +5217,12 @@
           if (part.text && (await setSlotText(part.day, part.type, part.text, true))) texts++;
           const photos = [];
           for (const p of part.photos) {
-            const f = zip.file(p.file);
-            if (existing.has(p.id) || !f) {
+            const photo = existing.has(p.id) ? null : await readPhoto(zip, p);
+            if (!photo) {
               skipped++;
               continue;
             }
-            const { file: _, ...info } = p;
-            photos.push({ ...info, blob: new Blob([await f.async('arraybuffer')], { type: 'image/jpeg' }) });
+            photos.push(photo);
             existing.add(p.id);
           }
           if (photos.length === 0) continue;
@@ -5072,6 +5238,111 @@
         refreshAll();
       } catch (e) {
         toast('読み込みに失敗しました：' + e.message, 5000);
+      }
+    }
+
+    // 置き換える：先に新しいデータを全部組み立ててから（途中で失敗しても今のデータは無事）、
+    // 今の状態を「元に戻す」用に残し、まとめて入れ替える
+    async function importReplace({ zip, parts }) {
+      toast('置き換え中…', 0);
+      try {
+        const map = new Map();
+        for (const part of parts) {
+          const key = slotKey(part.day, part.type);
+          const slot = map.get(key) || { key, day: part.day, type: part.type, photos: [], cover: null, text: '' };
+          if (part.text && !slot.text) slot.text = part.text;
+          if (part.cover && !slot.cover) slot.cover = part.cover;
+          for (const p of part.photos) {
+            const photo = await readPhoto(zip, p);
+            if (photo && !slot.photos.some((x) => x.id === photo.id)) slot.photos.push(photo);
+          }
+          map.set(key, slot);
+        }
+        const slots = [...map.values()]
+          .filter((s) => s.photos.length || s.text)
+          .map((s) => {
+            const t = trimSlot(s);
+            if (!t.photos.some((p) => p.id === t.cover)) t.cover = t.photos[0]?.id ?? null;
+            return t;
+          });
+        await saveUndo(await getAllSlots());
+        await replaceAllSlots(slots);
+        const c = countData(slots);
+        toast(`置き換えました：${c.days}日分・写真${c.photos}枚`, 5000);
+        refreshAll();
+      } catch (e) {
+        toast('置き換えに失敗しました（今のデータはそのままです）：' + e.message, 6000);
+      }
+    }
+
+    // 全部を入れ替える（1回の書き込みでまとめて行うので、途中で止まっても半端にならない）
+    const replaceAllSlots = (slots) => serial(() => withStore('readwrite', (st) => {
+      st.clear();
+      let last = null;
+      for (const s of slots) last = st.put(s);
+      return last || st.count();
+    }));
+
+    // 「元に戻す」用の保管場所（記録とは別のデータベースに、1回分だけ）
+    function openUndoDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open('meal-log-undo', 1);
+        req.onupgradeneeded = () => {
+          req.result.createObjectStore('slots', { keyPath: 'key' });
+          req.result.createObjectStore('meta', { keyPath: 'k' });
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+    async function undoTx(mode, action) {
+      const db = await openUndoDB();
+      try {
+        return await new Promise((resolve, reject) => {
+          const tx = db.transaction(['slots', 'meta'], mode);
+          const result = action(tx.objectStore('slots'), tx.objectStore('meta'));
+          tx.oncomplete = () => resolve(result && 'result' in result ? result.result : undefined);
+          tx.onerror = () => reject(tx.error);
+        });
+      } finally {
+        db.close();
+      }
+    }
+    const saveUndo = (slots) => undoTx('readwrite', (st, meta) => {
+      st.clear();
+      slots.forEach((s) => st.put(s));
+      meta.put({ k: 'info', savedAt: Date.now(), ...countData(slots) });
+    });
+    const loadUndoInfo = () => undoTx('readonly', (st, meta) => meta.get('info'));
+    const loadUndoSlots = () => undoTx('readonly', (st) => st.getAll());
+    const clearUndo = () => undoTx('readwrite', (st, meta) => {
+      st.clear();
+      meta.clear();
+    });
+
+    // 設定･情報の「元に戻す」
+    async function renderUndo() {
+      const info = await loadUndoInfo().catch(() => null);
+      $('undo-box').hidden = !info;
+      if (info) {
+        $('undo-text').textContent =
+          `${formatStamp(info.savedAt)} に置き換える前の状態（${info.days}日分・写真${info.photos}枚）に戻せます`;
+      }
+    }
+    $('undo-btn').addEventListener('click', async () => {
+      const info = await loadUndoInfo();
+      if (!info) return;
+      const current = countData(await getAllSlots());
+      if (!confirm(`置き換える前の状態（${info.days}日分・写真${info.photos}枚）に戻します。\n` +
+        `今のデータ（${current.days}日分・写真${current.photos}枚）は、その状態に入れ替わります。よろしいですか？`)) return;
+      toast('元に戻しています…', 0);
+      try {
+        await replaceAllSlots(await loadUndoSlots());
+        await clearUndo();
+        toast('置き換える前の状態に戻しました', 4000);
+        refreshAll();
+      } catch (e) {
+        toast('元に戻せませんでした：' + e.message, 6000);
       }
     });
 
