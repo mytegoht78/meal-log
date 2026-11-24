@@ -28,24 +28,6 @@
       /* タップしたところに出る水色の残像を消す */
       -webkit-tap-highlight-color: transparent;
     }
-    /* アプリとして起動したときのアイコン表示（Android の起動画面から自然につなぐ） */
-    #splash {
-      display: none;
-      position: fixed;
-      inset: 0;
-      z-index: 100;
-      align-items: center;
-      justify-content: center;
-      background: #fffaf3;
-      transition: opacity 0.3s;
-    }
-    #splash img {
-      width: 144px;
-      height: 144px;
-    }
-    #splash.fade {
-      opacity: 0;
-    }
     body {
       font-family: sans-serif;
       margin: 0;
@@ -242,16 +224,26 @@
       font-size: 0.8em;
       line-height: 1.5;
     }
-    /* 複数枚あるときの印 */
-    .badge {
+    /* 複数枚あるときの印（枚数分の点。メイン写真の位置が白） */
+    .dots {
       position: absolute;
-      right: 4px;
-      bottom: 4px;
-      padding: 1px 5px;
-      border-radius: 4px;
-      background: rgba(0, 0, 0, 0.6);
-      color: #fff;
-      font-size: 0.72em;
+      left: 50%;
+      bottom: 6px;
+      display: flex;
+      gap: 5px;
+      padding: 4px 7px;
+      border-radius: 10px;
+      background: rgba(0, 0, 0, 0.45);
+      transform: translateX(-50%);
+    }
+    .dots i {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.45);
+    }
+    .dots i.on {
+      background: #fff;
     }
 
     /* ===== 重ねて表示する画面 ===== */
@@ -534,16 +526,6 @@
       background: #fff;
       font-family: inherit;
       font-size: 1em;
-    }
-    .ed-photo select {
-      width: 100%;
-      margin-top: 4px;
-      padding: 4px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      background: #fff;
-      font-family: inherit;
-      font-size: 0.8em;
     }
 
     /* ----- 写真の拡大表示 ----- */
@@ -1017,12 +999,22 @@
 
     /* ----- お気に入り ----- */
     .heart {
+      display: inline-flex;
       color: #bbb;
+      font-style: normal;
     }
     .heart.on {
       color: #e5527a;
     }
+    .heart-svg {
+      display: block;
+      width: 1em;
+      height: 1em;
+    }
     .fav-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       width: 30px;
       height: 30px;
       padding: 0;
@@ -1032,6 +1024,11 @@
       color: #fff;
       font-size: 17px;
       line-height: 30px;
+    }
+    .ed-tool.fav-tool {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
     .fav-btn.on {
       background: #fff;
@@ -1256,19 +1253,6 @@
   </style>
 </head>
 <body>
-  <!-- アプリとして起動したときだけ、アイコンを1秒見せてから消す -->
-  <div id="splash"><img src="icon-512.png" alt=""></div>
-  <script>
-    (function () {
-      if (!matchMedia('(display-mode: standalone)').matches) return;
-      const splash = document.getElementById('splash');
-      splash.style.display = 'flex';
-      setTimeout(function () {
-        splash.classList.add('fade');
-        setTimeout(function () { splash.remove(); }, 350);
-      }, 1000);
-    })();
-  </script>
   <!-- ホーム -->
   <section id="page-home" class="page active">
     <div class="filter">
@@ -1303,7 +1287,8 @@
       <label><input type="checkbox" data-album-type="breakfast" checked>朝食</label>
       <label><input type="checkbox" data-album-type="lunch" checked>昼食</label>
       <label><input type="checkbox" data-album-type="dinner" checked>夕食</label>
-      <label><input type="checkbox" id="al-fav"><span class="heart on">♥</span>お気に入りのみ</label>
+      <label><input type="checkbox" id="al-fav"><span class="heart on al-heart"></span>お気に入りのみ</label>
+      <label><input type="checkbox" id="al-main">★メイン写真のみ</label>
     </div>
     <div class="filter">
       <select id="al-year" aria-label="年"></select>年
@@ -1825,6 +1810,14 @@
         if (changed) await putSlot(s);
       }
     });
+    // お気に入りのハート（文字のハートは細く、機種で形も変わるので SVG で描く）
+    // on = 塗りつぶし、off = 同じ形の枠線。色は周りの文字色（currentColor）
+    const HEART_PATH = 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z';
+    function heartSvg(on) {
+      return `<svg class="heart-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="${HEART_PATH}" ` +
+        (on ? 'fill="currentColor"' : 'fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"') +
+        '/></svg>';
+    }
     // 画面上の写真データにも反映して、♡のボタンを描き直す
     async function flipFav(key, photo, button) {
       photo.fav = await toggleFav(key, photo.id);
@@ -1833,7 +1826,7 @@
       refreshAll();
     }
     function setFavButton(button, on) {
-      button.textContent = on ? '♥' : '♡';
+      button.innerHTML = heartSvg(on);
       button.classList.toggle('on', !!on);
       button.setAttribute('aria-label', on ? 'お気に入りを外す' : 'お気に入りにする');
     }
@@ -2347,14 +2340,7 @@
                 <button class="ed-tool star-tool${isCover ? ' on' : ''}" aria-label="メインにする">${isCover ? '★' : '☆'}</button>
                 <button class="ed-tool fav-tool"></button>
                 <button class="ed-tool cal-tool${p.cal ? ' on' : ''}" aria-label="${p.cal ? 'カレンダー写真をやめる' : 'カレンダー写真にする'}">📅</button>
-              </div>
-              <select aria-label="種類を移動">
-                ${TYPE_ORDER.map((t) => {
-                  if (t === type) return `<option value="${t}" selected>${TYPES[t].label}</option>`;
-                  const full = (slots.find((s) => s.type === t)?.photos.length || 0) >= MAX_PHOTOS;
-                  return `<option value="${t}"${full ? ' disabled' : ''}>${TYPES[t].label}${full ? '（3枚）' : 'へ移動'}</option>`;
-                }).join('')}
-              </select>`;
+              </div>`;
             const fav = div.querySelector('.fav-tool');
             setFavButton(fav, p.fav);
             fav.addEventListener('click', () => flipFav(slot.key, p, fav));
@@ -2377,13 +2363,6 @@
               if (!confirm('この写真を削除しますか？')) return;
               await takePhoto(slot.key, p.id);
               toast('削除しました');
-              refreshAll();
-            });
-            div.querySelector('select').addEventListener('change', async (e) => {
-              const moved = await movePhoto(slot.key, p.id, e.target.value);
-              toast(moved
-                ? `${TYPES[e.target.value].label}へ移動しました`
-                : `${TYPES[e.target.value].label}は${MAX_PHOTOS}枚まで登録済みです`);
               refreshAll();
             });
             grid.appendChild(div);
@@ -2737,7 +2716,9 @@
             img.src = listUrls.get(slot.photos[coverIndex]);
             box.appendChild(img);
             if (slot.photos.length > 1) {
-              box.insertAdjacentHTML('beforeend', `<span class="badge">❐${slot.photos.length}</span>`);
+              // 枚数分の点。メイン写真の位置が白
+              box.insertAdjacentHTML('beforeend', '<span class="dots">' +
+                slot.photos.map((_, i) => `<i${i === coverIndex ? ' class="on"' : ''}></i>`).join('') + '</span>');
             }
             // 1枚ならすぐ拡大、2〜3枚なら縦に並べて表示
             box.addEventListener('click', () => {
@@ -2826,6 +2807,7 @@
     albumMonth.innerHTML = '<option value="0">－</option>' +
       Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join('');
     document.querySelectorAll('.album-checks input').forEach((el) => el.addEventListener('change', renderAlbum));
+    document.querySelector('.al-heart').innerHTML = heartSvg(true);
     albumYear.addEventListener('change', renderAlbum);
     albumMonth.addEventListener('change', renderAlbum);
 
@@ -2842,6 +2824,7 @@
       const types = new Set([...document.querySelectorAll('[data-album-type]')]
         .filter((el) => el.checked).map((el) => el.dataset.albumType));
       const favOnly = $('al-fav').checked;
+      const mainOnly = $('al-main').checked;
       const y = albumYear.value;
       const m = Number(albumMonth.value);
 
@@ -2852,6 +2835,7 @@
         if (m && Number(s.day.slice(5, 7)) !== m) continue;
         for (const p of s.photos) {
           if (favOnly && !p.fav) continue;
+          if (mainOnly && p.id !== s.cover) continue;
           items.push({ p, key: s.key, day: s.day });
         }
       }
@@ -3018,7 +3002,7 @@
         for (const p of s.photos) {
           const b = document.createElement('button');
           b.className = 'pick-item' + (p.id === shown?.id ? ' selected' : '');
-          b.innerHTML = `<img alt=""><span>${TYPES[s.type].label}${p.fav ? ' ♥' : ''}</span>`;
+          b.innerHTML = `<img alt=""><span>${TYPES[s.type].label}${p.fav ? ' <i class="heart on">' + heartSvg(true) + '</i>' : ''}</span>`;
           b.querySelector('img').src = pickUrls.get(p);
           b.addEventListener('click', async () => {
             await setCalendarPhoto(day, s.key, p.id);
