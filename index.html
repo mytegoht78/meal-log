@@ -816,19 +816,9 @@
       gap: 8px;
       margin-bottom: 10px;
     }
-    .cal-head h1 {
-      min-width: 8em;
-      margin: 0;
-      text-align: center;
-    }
-    .cal-head button {
-      width: 44px;
-      height: 40px;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      background: #fff;
-      color: inherit;
-      font-size: 1.3em;
+    /* 下の空いた部分でも左右スワイプで月を送れるよう、画面の高さいっぱいにする */
+    #page-calendar.active {
+      min-height: calc(100dvh - 112px);
     }
     .cal-week,
     .cal-grid {
@@ -909,10 +899,20 @@
     .cal-day img {
       pointer-events: none;
     }
-    /* 横向き全画面。縦持ちの画面では中身を90度回し、スマホを横にして見る */
+    /* 横向き表示。ボトムメニューより上の部分を使い、縦持ちの画面では中身を90度回す */
     #cal-land {
-      z-index: 9;
+      display: none;
+      position: fixed;
+      left: 0;
+      right: 0;
+      top: 0;
+      bottom: var(--nav-h, 70px);
+      z-index: 4;
+      overflow: hidden;
       background: var(--bg);
+    }
+    #cal-land.open {
+      display: block;
     }
     .land-box {
       position: absolute;
@@ -927,8 +927,8 @@
         inset: auto;
         top: 0;
         left: 100vw;
-        width: 100vh;
-        width: 100dvh;
+        width: calc(100vh - var(--nav-h, 70px));
+        width: calc(100dvh - var(--nav-h, 70px));
         height: 100vw;
         transform-origin: top left;
         transform: rotate(90deg);
@@ -944,20 +944,6 @@
       margin: 0;
       font-size: 1.15em;
       text-align: center;
-    }
-    .land-head button {
-      width: 40px;
-      height: 34px;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      background: #fff;
-      color: inherit;
-      font-size: 1.2em;
-    }
-    .land-head .back-btn {
-      border: none;
-      background: none;
-      font-size: 1.5em;
     }
     .land-grid {
       flex: 1;
@@ -1051,6 +1037,41 @@
       line-height: 1.5;
     }
 
+    .info-body table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9em;
+    }
+    .info-body th,
+    .info-body td {
+      padding: 6px 4px;
+      border-top: 1px solid var(--line);
+      text-align: right;
+      white-space: nowrap;
+    }
+    .info-body th {
+      color: var(--sub);
+      font-weight: normal;
+    }
+    .info-body th:first-child,
+    .info-body td:first-child {
+      text-align: left;
+    }
+    .info-body tr.total td {
+      font-weight: bold;
+    }
+    .storage-bar {
+      height: 8px;
+      margin-top: 6px;
+      border-radius: 4px;
+      background: var(--line);
+      overflow: hidden;
+    }
+    .storage-bar span {
+      display: block;
+      height: 100%;
+      background: var(--accent);
+    }
     .set-time {
       display: flex;
       align-items: center;
@@ -1337,9 +1358,7 @@
   <!-- カレンダー（1日1枚の写真。タップでその日の編集画面） -->
   <section id="page-calendar" class="page">
     <div class="cal-head">
-      <button id="cal-prev" aria-label="前の月">‹</button>
-      <h1 id="cal-title"></h1>
-      <button id="cal-next" aria-label="次の月">›</button>
+      <button id="cal-ym" class="ym-btn" aria-label="表示する年月を選ぶ"></button>
     </div>
     <div class="cal-week">
       <span class="sun">日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span class="sat">土</span>
@@ -1347,9 +1366,11 @@
     <div id="cal-grid" class="cal-grid"></div>
     <div class="cal-actions">
       <button id="cal-today" class="backup-btn">今月に戻る</button>
-      <button id="cal-land-btn" class="backup-btn">⤢ 横向きで見る</button>
     </div>
-    <p class="set-note" style="text-align:center">日付を長押しすると、カレンダーに出す写真を選べます</p>
+    <p class="set-note" style="text-align:center">
+      左右にスワイプで月を切り替え／日付の長押しでカレンダーに出す写真を選択<br>
+      下の「カレンダー」をもう一度押すと横向きになります
+    </p>
   </section>
 
   <!-- アルバム -->
@@ -1390,6 +1411,10 @@
       <p class="set-note">撮影した時刻から種類を自動で選ぶときに使います。どれにも入らない時刻は「日記」になります。</p>
     </div>
     <div class="set-group">
+      <div class="set-title">情報</div>
+      <div id="info-body" class="info-body"></div>
+    </div>
+    <div class="set-group">
       <div class="set-title">バックアップ</div>
       <button id="export-btn" class="backup-btn">💾 バックアップを保存</button>
       <label for="import-file" class="backup-btn">📂 バックアップを読み込む</label>
@@ -1402,7 +1427,7 @@
     <button data-page="calendar"><span>📅</span>カレンダー</button>
     <button id="nav-add" class="nav-add" aria-label="写真を追加">＋</button>
     <button data-page="album"><span>🖼</span>アルバム</button>
-    <button data-page="settings"><span>⚙️</span>設定</button>
+    <button data-page="settings"><span>⚙️</span>設定・情報</button>
   </nav>
 
   <!-- 写真を受け取るための部品（画面には出さない） -->
@@ -1446,13 +1471,11 @@
   </div>
 
   <!-- カレンダーの横向き全画面（スマホを横に持って見る） -->
-  <div id="cal-land" class="overlay">
+  <!-- ボトムメニューは出したまま、その上の部分に横向きで表示する。カレンダーボタンで縦横を切り替え -->
+  <div id="cal-land">
     <div class="land-box">
       <div class="land-head">
-        <button id="land-close" class="back-btn" aria-label="戻る">←</button>
-        <button id="land-prev" aria-label="前の月">‹</button>
         <h2 id="land-title"></h2>
-        <button id="land-next" aria-label="次の月">›</button>
       </div>
       <div class="cal-week">
         <span class="sun">日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span class="sat">土</span>
@@ -1631,7 +1654,8 @@
 
     function formatSize(bytes) {
       if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + ' KB';
-      return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+      if (bytes < 1024 * 1024 * 1024) return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+      return (bytes / 1024 / 1024 / 1024).toFixed(1) + ' GB';
     }
     // 日付は "2026-11-24" の文字列で扱う
     function dayKey(time) {
@@ -2769,7 +2793,7 @@
       // 表示されてからでないとスクロール位置を設定できない
       fillWheel($('wheel-year'), years.slice().reverse(), year); // 上が古い年
       const months = Array.from({ length: 12 }, (_, i) => ({ value: i + 1, label: `${i + 1}月` }));
-      months.push({ value: 0, label: allMonthsLabel });
+      if (allMonthsLabel) months.push({ value: 0, label: allMonthsLabel });
       fillWheel($('wheel-month'), months, month);
     }
     $('ym-ok').addEventListener('click', async () => {
@@ -2812,12 +2836,7 @@
       if (today.startsWith(prefix) && !byDay.has(today)) byDay.set(today, {}); // 今日は記録がなくても出す
 
       list.innerHTML = '';
-      if (slots.length > 0) {
-        const photoCount = slots.reduce((n, s) => n + s.photos.length, 0);
-        const total = slots.reduce((n, s) => n + s.photos.reduce((t, p) => t + p.blob.size, 0), 0);
-        const dayCount = new Set(slots.map((s) => s.day)).size;
-        list.innerHTML = `<p class="summary">${dayCount}日分・写真${photoCount}枚・合計 ${formatSize(total)}</p>`;
-      } else if (byDay.size === 0) {
+      if (byDay.size === 0) {
         list.innerHTML = '<p class="empty">この期間の記録はありません</p>';
       }
 
@@ -2890,6 +2909,7 @@
       renderStack();
       renderAlbum();
       renderCalendar();
+      renderInfo();
     }
 
     // =====================================================
@@ -3061,7 +3081,7 @@
         byDay.get(s.day).push(s);
       }
       calUrls.renew();
-      $('cal-title').textContent = `${y}年${m + 1}月`;
+      $('cal-ym').innerHTML = ymLabel(y, m + 1);
       $('land-title').textContent = `${y}年${m + 1}月`;
       const now = new Date();
       $('cal-today').style.visibility = y === now.getFullYear() && m === now.getMonth() ? 'hidden' : 'visible';
@@ -3184,23 +3204,68 @@
     });
     $('cal-pick-close').addEventListener('click', closeLayer);
 
-    // 横向き全画面
-    $('cal-land-btn').addEventListener('click', () => {
-      openLayer($('cal-land'));
-      renderCalendar();
-    });
-    $('land-close').addEventListener('click', closeLayer);
-    $('land-prev').addEventListener('click', () => moveMonth(-1));
-    $('land-next').addEventListener('click', () => moveMonth(1));
-    // 横向き画面のスワイプ（縦持ちで90度回している時は、見た目の左右が画面の上下になる）
-    let landTouch = null;
-    $('land-grid').addEventListener('touchstart', (e) => (landTouch = [e.touches[0].clientX, e.touches[0].clientY]), { passive: true });
-    $('land-grid').addEventListener('touchend', (e) => {
-      if (!landTouch) return;
-      const rotated = matchMedia('(orientation: portrait)').matches;
-      const d = rotated ? e.changedTouches[0].clientY - landTouch[1] : e.changedTouches[0].clientX - landTouch[0];
-      landTouch = null;
-      if (Math.abs(d) > 60) moveMonth(d < 0 ? 1 : -1);
+    // =====================================================
+    // 設定・情報の「情報」（全体と年ごとの件数・容量、保存領域の使用量の目安）
+    // =====================================================
+    async function renderInfo() {
+      if (!$('page-settings').classList.contains('active')) return;
+      const all = await getAllSlots();
+      const sum = (slots) => ({
+        days: new Set(slots.map((s) => s.day)).size,
+        photos: slots.reduce((n, s) => n + s.photos.length, 0),
+        size: slots.reduce((n, s) => n + s.photos.reduce((t, p) => t + p.blob.size, 0), 0),
+      });
+      const row = (label, v, cls = '') =>
+        `<tr class="${cls}"><td>${label}</td><td>${v.days}日分</td><td>写真${v.photos}枚</td><td>${formatSize(v.size)}</td></tr>`;
+      const years = [...new Set(all.map((s) => s.day.slice(0, 4)))].sort().reverse();
+      let html = '<table><tr><th></th><th>記録</th><th>写真</th><th>容量</th></tr>';
+      html += row('全体', sum(all), 'total');
+      for (const y of years) html += row(`${y}年`, sum(all.filter((s) => s.day.startsWith(y))));
+      html += '</table>';
+
+      // ブラウザが教えてくれる概算（このアプリが使っている量 / 使える上限）
+      if (navigator.storage?.estimate) {
+        try {
+          const { usage, quota } = await navigator.storage.estimate();
+          const pct = quota ? Math.max(0.5, (usage / quota) * 100) : 0;
+          html += `<p class="set-note">スマホの保存領域：${formatSize(usage)} 使用中（このアプリが使える上限の目安 ${formatSize(quota)}）</p>` +
+            `<div class="storage-bar"><span style="width:${Math.min(100, pct)}%"></span></div>`;
+        } catch {
+          // 取れなければ出さない
+        }
+      }
+      $('info-body').innerHTML = html;
+    }
+
+    // 横向き表示（ボトムメニューの「カレンダー」をカレンダー画面でもう一度押すと切り替わる）
+    function setCalendarLandscape(on) {
+      $('cal-land').classList.toggle('open', on);
+      if (on) renderCalendar();
+    }
+    // ボトムメニューの高さ（横向き表示はその上の部分を使う）
+    function updateNavHeight() {
+      document.documentElement.style.setProperty('--nav-h', document.querySelector('.bottom-nav').offsetHeight + 'px');
+    }
+    updateNavHeight();
+    addEventListener('resize', updateNavHeight);
+
+    // 年月はドラムで選ぶ（年は記録がある最初の年〜来年）
+    $('cal-ym').addEventListener('click', async () => {
+      const now = new Date().getFullYear();
+      const first = Math.min(now, ...(await getAllSlots()).map((s) => Number(s.day.slice(0, 4))));
+      const years = [];
+      for (let y = now + 1; y >= first; y--) years.push({ value: y, label: `${y}年` });
+      openYmPicker({
+        years,
+        allMonthsLabel: null, // カレンダーは必ず1か月
+        year: calYear,
+        month: calMonth + 1,
+        onDone: (y, m) => {
+          calYear = Number(y);
+          calMonth = m - 1;
+          renderCalendar();
+        },
+      });
     });
 
     function moveMonth(step) {
@@ -3209,33 +3274,46 @@
       calMonth = d.getMonth();
       renderCalendar();
     }
-    $('cal-prev').addEventListener('click', () => moveMonth(-1));
-    $('cal-next').addEventListener('click', () => moveMonth(1));
     $('cal-today').addEventListener('click', () => {
       calYear = new Date().getFullYear();
       calMonth = new Date().getMonth();
       renderCalendar();
     });
-    // 左右にスワイプで月を切り替え
-    let calTouchX = null;
-    $('cal-grid').addEventListener('touchstart', (e) => (calTouchX = e.touches[0].clientX), { passive: true });
-    $('cal-grid').addEventListener('touchend', (e) => {
-      if (calTouchX === null) return;
-      const dx = e.changedTouches[0].clientX - calTouchX;
-      calTouchX = null;
-      if (Math.abs(dx) > 60) moveMonth(dx < 0 ? 1 : -1);
-    });
+
+    // 左右にスワイプで月を切り替え（カレンダー画面のどこでも。縦のスクロールとは区別する）
+    // 横向き表示で90度回しているときは、見た目の左右が画面の上下になる
+    function bindMonthSwipe(el, rotatedNow) {
+      let start = null;
+      el.addEventListener('touchstart', (e) => (start = [e.touches[0].clientX, e.touches[0].clientY]), { passive: true });
+      el.addEventListener('touchend', (e) => {
+        if (!start) return;
+        let dx = e.changedTouches[0].clientX - start[0];
+        let dy = e.changedTouches[0].clientY - start[1];
+        start = null;
+        if (rotatedNow()) [dx, dy] = [dy, -dx];
+        if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) moveMonth(dx < 0 ? 1 : -1);
+      });
+    }
+    bindMonthSwipe($('page-calendar'), () => false);
+    bindMonthSwipe($('cal-land'), () => matchMedia('(orientation: portrait)').matches);
 
     // =====================================================
     // ページの切り替え（ボトムナビ）と設定
     // =====================================================
     document.querySelectorAll('.bottom-nav [data-page]').forEach((btn) => {
       btn.addEventListener('click', () => {
+        // カレンダー画面でもう一度「カレンダー」を押すと縦横を切り替える
+        if (btn.dataset.page === 'calendar' && $('page-calendar').classList.contains('active')) {
+          setCalendarLandscape(!$('cal-land').classList.contains('open'));
+          return;
+        }
+        setCalendarLandscape(false); // 別の画面へ移ったら縦向きに戻す
         document.querySelectorAll('.bottom-nav [data-page]').forEach((b) => b.classList.toggle('active', b === btn));
         document.querySelectorAll('.page').forEach((p) => p.classList.toggle('active', p.id === 'page-' + btn.dataset.page));
         window.scrollTo(0, 0);
         if (btn.dataset.page === 'album') renderAlbum();
         if (btn.dataset.page === 'calendar') renderCalendar();
+        if (btn.dataset.page === 'settings') renderInfo();
       });
     });
     $('nav-add').addEventListener('click', openAdder);
