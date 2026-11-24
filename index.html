@@ -250,6 +250,13 @@
       max-height: 92vh;
       overflow-y: auto;
     }
+    /* 上から出るシート（文字の入力用。キーボードに隠れない） */
+    .sheet-overlay.top {
+      justify-content: flex-start;
+    }
+    .sheet-overlay.top .sheet {
+      border-radius: 0 0 16px 16px;
+    }
     .sheet h2 {
       font-size: 1.1em;
       margin: 0 0 12px;
@@ -428,6 +435,12 @@
     }
     .ed-photo .remove {
       right: 4px;
+    }
+    .ed-photo .ed-fav {
+      position: absolute;
+      top: 4px;
+      left: 38px;
+      font-size: 16px;
     }
     .ed-text {
       width: 100%;
@@ -707,6 +720,98 @@
       line-height: 1.5;
     }
 
+    .set-time {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 4px;
+      border-top: 1px solid var(--line);
+    }
+    .set-title + .set-time {
+      border-top: none;
+    }
+    .set-time select {
+      padding: 4px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      background: #fff;
+      font-family: inherit;
+      font-size: 1em;
+    }
+
+    /* ----- お気に入り ----- */
+    .heart {
+      color: #bbb;
+    }
+    .heart.on {
+      color: #e5527a;
+    }
+    .fav-btn {
+      width: 30px;
+      height: 30px;
+      padding: 0;
+      border: none;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.55);
+      color: #fff;
+      font-size: 17px;
+      line-height: 30px;
+    }
+    .fav-btn.on {
+      background: #fff;
+      color: #e5527a;
+    }
+
+    /* ----- アルバム ----- */
+    .album-checks {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 14px;
+      margin-bottom: 10px;
+    }
+    .album-checks label {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .album-checks input {
+      width: 18px;
+      height: 18px;
+      margin: 0;
+      accent-color: var(--accent);
+    }
+    .album-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2px;
+      margin: 0 -12px;
+    }
+    .album-item {
+      position: relative;
+      aspect-ratio: 1;
+      background: #eee;
+    }
+    .album-item img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      cursor: pointer;
+    }
+    .album-item .fav-btn {
+      position: absolute;
+      right: 3px;
+      bottom: 3px;
+      width: 28px;
+      height: 28px;
+      font-size: 15px;
+      line-height: 28px;
+      background: rgba(0, 0, 0, 0.35);
+    }
+    .album-item .fav-btn.on {
+      background: rgba(255, 255, 255, 0.9);
+    }
+
     /* ----- 写真を追加 ----- */
     #adder {
       z-index: 12;
@@ -839,6 +944,14 @@
       color: #fff;
       font-size: 0.8em;
     }
+    .stack-item .fav-btn {
+      position: absolute;
+      left: 6px;
+      bottom: 6px;
+    }
+    .stack-item .fav-btn.on {
+      background: #fff;
+    }
     .stack-item .cover-btn.is-cover {
       border-color: var(--accent);
       background: var(--accent);
@@ -882,9 +995,23 @@
     <h1>カレンダー</h1>
     <p class="soon">準備中です</p>
   </section>
-  <section id="page-collection" class="page">
-    <h1>コレクション</h1>
-    <p class="soon">準備中です</p>
+
+  <!-- アルバム -->
+  <section id="page-album" class="page">
+    <h1>アルバム</h1>
+    <div class="album-checks">
+      <label><input type="checkbox" data-album-type="diary" checked>日記</label>
+      <label><input type="checkbox" data-album-type="breakfast" checked>朝食</label>
+      <label><input type="checkbox" data-album-type="lunch" checked>昼食</label>
+      <label><input type="checkbox" data-album-type="dinner" checked>夕食</label>
+      <label><input type="checkbox" id="al-fav"><span class="heart on">♥</span>お気に入りのみ</label>
+    </div>
+    <div class="filter">
+      <select id="al-year" aria-label="年"></select>年
+      <select id="al-month" aria-label="月"></select>月
+    </div>
+    <p id="al-count" class="summary"></p>
+    <div id="album-grid" class="album-grid"></div>
   </section>
 
   <!-- 設定 -->
@@ -902,6 +1029,13 @@
       </label>
     </div>
     <div class="set-group">
+      <div class="set-title">食事の時間帯</div>
+      <div class="set-time" data-meal="breakfast">🌅 朝食<span><select class="t-start"></select>時 〜 <select class="t-end"></select>時</span></div>
+      <div class="set-time" data-meal="lunch">☀️ 昼食<span><select class="t-start"></select>時 〜 <select class="t-end"></select>時</span></div>
+      <div class="set-time" data-meal="dinner">🌙 夕食<span><select class="t-start"></select>時 〜 <select class="t-end"></select>時</span></div>
+      <p class="set-note">撮影した時刻から種類を自動で選ぶときに使います。どれにも入らない時刻は「日記」になります。</p>
+    </div>
+    <div class="set-group">
       <div class="set-title">バックアップ</div>
       <button id="export-btn" class="backup-btn">💾 バックアップを保存</button>
       <label for="import-file" class="backup-btn">📂 バックアップを読み込む</label>
@@ -913,7 +1047,7 @@
     <button data-page="home" class="active"><span>🏠</span>ホーム</button>
     <button data-page="calendar"><span>📅</span>カレンダー</button>
     <button id="nav-add" class="nav-add" aria-label="写真を追加">＋</button>
-    <button data-page="collection"><span>🗂</span>コレクション</button>
+    <button data-page="album"><span>🖼</span>アルバム</button>
     <button data-page="settings"><span>⚙️</span>設定</button>
   </nav>
 
@@ -940,7 +1074,7 @@
     <div class="label">種類</div>
     <div id="adder-types" class="types"></div>
     <div class="label">文字（料理名・メモなど。なくてもOK）</div>
-    <input type="text" id="adder-text" class="date-input" maxlength="200" placeholder="例：たまごかけご飯">
+    <input type="text" id="adder-text" class="date-input" maxlength="200" placeholder="例：たまごかけご飯" autocomplete="off">
     <div class="actions">
       <button id="adder-cancel" class="btn-sub">キャンセル</button>
       <button id="adder-save" class="btn-main">保存</button>
@@ -973,10 +1107,11 @@
   </div>
 
   <!-- 文字の入力（文字だけの記録・ひとこと） -->
-  <div id="text-sheet" class="overlay sheet-overlay" style="z-index:13">
+  <!-- キーボードに隠れないよう、画面の上側に出す -->
+  <div id="text-sheet" class="overlay sheet-overlay top" style="z-index:13">
     <div class="sheet">
       <h2 id="text-title"></h2>
-      <input type="text" id="text-input" class="date-input" maxlength="200" enterkeyhint="done">
+      <input type="text" id="text-input" class="date-input" maxlength="200" enterkeyhint="done" autocomplete="off">
       <div class="actions">
         <button id="text-cancel" class="btn-sub">キャンセル</button>
         <button id="text-save" class="btn-main">保存</button>
@@ -998,6 +1133,7 @@
     <div class="viewer-top">
       <span id="viewer-count"></span>
       <button id="viewer-cover"></button>
+      <button id="viewer-fav" class="fav-btn"></button>
       <button id="viewer-close" aria-label="閉じる">×</button>
     </div>
     <img id="viewer-img" alt="食事の写真">
@@ -1071,12 +1207,27 @@
       return { ...slot, photos: slot.photos.filter((p) => p === cover || others.includes(p)) };
     }
 
-    // 時刻から種類を決める（食事の時間以外は日記）
+    // 食事の時間帯（設定画面で変えられる。[開始時, 終了時)。スマホに記憶）
+    const MEALS = ['breakfast', 'lunch', 'dinner'];
+    const DEFAULT_TIMES = { breakfast: [5, 10], lunch: [10, 15], dinner: [17, 23] };
+    function loadMealTimes() {
+      try {
+        const t = JSON.parse(localStorage.getItem('meal-log-times'));
+        if (t && MEALS.every((k) => Array.isArray(t[k]) && t[k].length === 2)) return t;
+      } catch {
+        // 読めなければ初期値
+      }
+      return JSON.parse(JSON.stringify(DEFAULT_TIMES));
+    }
+    let mealTimes = loadMealTimes();
+
+    // 時刻から種類を決める（どの時間帯にも入らなければ日記）
     function typeByTime(time) {
       const h = new Date(time).getHours();
-      if (h >= 5 && h < 10) return 'breakfast';
-      if (h >= 10 && h < 15) return 'lunch';
-      if (h >= 17 && h < 23) return 'dinner';
+      for (const k of MEALS) {
+        const [start, end] = mealTimes[k];
+        if (h >= start && h < end) return k;
+      }
       return 'diary';
     }
 
@@ -1308,6 +1459,28 @@
       slot.cover = photoId;
       await putSlot(slot);
     });
+    // お気に入りの付け外し。変更後の状態（true/false）を返す
+    const toggleFav = (key, photoId) => serial(async () => {
+      const slot = await getSlot(key);
+      const p = slot?.photos.find((x) => x.id === photoId);
+      if (!p) return false;
+      p.fav = !p.fav;
+      await putSlot(slot);
+      return p.fav;
+    });
+    // 画面上の写真データにも反映して、♡のボタンを描き直す
+    async function flipFav(key, photo, button) {
+      photo.fav = await toggleFav(key, photo.id);
+      if (button) setFavButton(button, photo.fav);
+      toast(photo.fav ? 'お気に入りにしました' : 'お気に入りを外しました', 1500);
+      refreshAll();
+    }
+    function setFavButton(button, on) {
+      button.textContent = on ? '♥' : '♡';
+      button.classList.toggle('on', !!on);
+      button.setAttribute('aria-label', on ? 'お気に入りを外す' : 'お気に入りにする');
+    }
+
     // 文字を保存。onlyIfEmpty のときは、すでに文字があれば変えない。変えたら true
     const setSlotText = (day, type, text, onlyIfEmpty = false) => serial(async () => {
       const slot = (await getSlot(slotKey(day, type))) || emptySlot(day, type);
@@ -1810,6 +1983,7 @@
               <img alt="写真${i + 1}">
               <button class="star" aria-label="代表にする">${isCover ? '★' : '☆'}</button>
               <button class="remove" aria-label="削除">×</button>
+              <button class="fav-btn ed-fav"></button>
               <select aria-label="種類を移動">
                 ${TYPE_ORDER.map((t) => {
                   if (t === type) return `<option value="${t}" selected>${TYPES[t].label}</option>`;
@@ -1817,6 +1991,9 @@
                   return `<option value="${t}"${full ? ' disabled' : ''}>${TYPES[t].label}${full ? '（3枚）' : 'へ移動'}</option>`;
                 }).join('')}
               </select>`;
+            const fav = div.querySelector('.ed-fav');
+            setFavButton(fav, p.fav);
+            fav.addEventListener('click', () => flipFav(slot.key, p, fav));
             div.querySelector('img').src = editorUrls.get(p.blob);
             div.querySelector('img').addEventListener('click', () => openViewer(slot.photos, i, slot.key));
             div.querySelector('.star').addEventListener('click', async () => {
@@ -1878,17 +2055,22 @@
     // =====================================================
     let viewerPhotos = [];
     let viewerIndex = 0;
-    let viewerSlotKey = null; // 代表を変えられるのは、保存済みの写真のときだけ
-    let viewerCover = null;
+    let viewerKeys = []; // 写真ごとの記録のkey（保存前の写真は null。代表・お気に入りは保存済みだけ）
+    let viewerSlots = new Map(); // key → { cover, count, text, day, type }
+    let viewerFromAlbum = false;
     let viewerUrl = null;
 
+    // key は1つ（同じ記録の写真）か、写真ごとの配列（アルバム）
     async function openViewer(photos, index, key) {
       viewerPhotos = photos;
       viewerIndex = index;
-      viewerSlotKey = key;
-      const slot = key ? await getSlot(key) : null;
-      viewerCover = slot?.cover;
-      $('viewer-text').textContent = slot?.text || '';
+      viewerFromAlbum = Array.isArray(key);
+      viewerKeys = viewerFromAlbum ? key : photos.map(() => key);
+      viewerSlots = new Map();
+      for (const k of new Set(viewerKeys)) {
+        const s = k ? await getSlot(k) : null;
+        if (s) viewerSlots.set(k, { cover: s.cover, count: s.photos.length, text: s.text || '', day: s.day, type: s.type });
+      }
       renderViewer();
       openLayer($('viewer'), {
         onClose: () => {
@@ -1908,11 +2090,17 @@
       $('viewer-prev').style.display = many ? '' : 'none';
       $('viewer-next').style.display = many ? '' : 'none';
 
+      const slot = viewerSlots.get(viewerKeys[viewerIndex]);
       const coverBtn = $('viewer-cover');
-      coverBtn.style.display = viewerSlotKey && many ? '' : 'none';
-      const isCover = p.id === viewerCover;
+      coverBtn.style.display = slot && slot.count > 1 ? '' : 'none';
+      const isCover = slot && p.id === slot.cover;
       coverBtn.textContent = isCover ? '★ 代表写真' : '☆ 代表にする';
-      coverBtn.classList.toggle('is-cover', isCover);
+      coverBtn.classList.toggle('is-cover', !!isCover);
+      $('viewer-fav').style.display = slot ? '' : 'none';
+      setFavButton($('viewer-fav'), p.fav);
+      // アルバムから開いたときは、どの日の何の写真かも出す
+      const where = viewerFromAlbum && slot ? `${formatDay(slot.day)} ${TYPES[slot.type].label}` : '';
+      $('viewer-text').textContent = [where, slot?.text].filter(Boolean).join('　');
 
       const info = [p.takenAt ? formatDateTime(p.takenAt) : '', SOURCE_ICON[p.source], formatSize(p.blob.size)];
       if (p.width) info.push(`${p.width}×${p.height}`);
@@ -1929,12 +2117,18 @@
 
     $('viewer-cover').addEventListener('click', async () => {
       const p = viewerPhotos[viewerIndex];
-      if (!viewerSlotKey || p.id === viewerCover) return;
-      await setCover(viewerSlotKey, p.id);
-      viewerCover = p.id;
+      const key = viewerKeys[viewerIndex];
+      const slot = viewerSlots.get(key);
+      if (!slot || p.id === slot.cover) return;
+      await setCover(key, p.id);
+      slot.cover = p.id;
       renderViewer();
       toast('代表写真にしました');
       refreshAll();
+    });
+    $('viewer-fav').addEventListener('click', () => {
+      const key = viewerKeys[viewerIndex];
+      if (key) flipFav(key, viewerPhotos[viewerIndex], $('viewer-fav'));
     });
     $('viewer-close').addEventListener('click', closeLayer);
     $('viewer-prev').addEventListener('click', () => moveViewer(-1));
@@ -2076,6 +2270,7 @@
       showList();
       renderDayEditor();
       renderStack();
+      renderAlbum();
     }
 
     // =====================================================
@@ -2112,7 +2307,11 @@
         const item = document.createElement('div');
         item.className = 'stack-item';
         item.innerHTML = `<img alt="写真${i + 1}">
-          <button class="cover-btn${isCover ? ' is-cover' : ''}">${isCover ? '★ 代表写真' : '☆ 代表にする'}</button>`;
+          <button class="cover-btn${isCover ? ' is-cover' : ''}">${isCover ? '★ 代表写真' : '☆ 代表にする'}</button>
+          <button class="fav-btn"></button>`;
+        const fav = item.querySelector('.fav-btn');
+        setFavButton(fav, p.fav);
+        fav.addEventListener('click', () => flipFav(key, p, fav));
         item.querySelector('img').src = stackUrls.get(p.blob);
         item.querySelector('img').addEventListener('click', () => openViewer(slot.photos, i, key));
         item.querySelector('.cover-btn').addEventListener('click', async () => {
@@ -2127,6 +2326,68 @@
     $('stack-close').addEventListener('click', closeLayer);
 
     // =====================================================
+    // アルバム（写真を3列で新しい順に。種類・お気に入り・年月で絞り込み）
+    // =====================================================
+    const albumUrls = makeUrlCache();
+    const albumYear = $('al-year');
+    const albumMonth = $('al-month');
+    albumMonth.innerHTML = '<option value="0">－</option>' +
+      Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join('');
+    document.querySelectorAll('.album-checks input').forEach((el) => el.addEventListener('change', renderAlbum));
+    albumYear.addEventListener('change', renderAlbum);
+    albumMonth.addEventListener('change', renderAlbum);
+
+    async function renderAlbum() {
+      if (!$('page-album').classList.contains('active')) return;
+      const all = await getAllSlots();
+
+      // 年の選択肢：「－」と記録がある年
+      const year = albumYear.value || '0';
+      const years = [...new Set(all.map((s) => s.day.slice(0, 4)))].sort().reverse();
+      albumYear.innerHTML = '<option value="0">－</option>' + years.map((y) => `<option value="${y}">${y}</option>`).join('');
+      albumYear.value = years.includes(year) ? year : '0';
+
+      const types = new Set([...document.querySelectorAll('[data-album-type]')]
+        .filter((el) => el.checked).map((el) => el.dataset.albumType));
+      const favOnly = $('al-fav').checked;
+      const y = albumYear.value;
+      const m = Number(albumMonth.value);
+
+      const items = [];
+      for (const s of all) {
+        if (!types.has(s.type)) continue;
+        if (y !== '0' && s.day.slice(0, 4) !== y) continue;
+        if (m && Number(s.day.slice(5, 7)) !== m) continue;
+        for (const p of s.photos) {
+          if (favOnly && !p.fav) continue;
+          items.push({ p, key: s.key, day: s.day });
+        }
+      }
+      // 新しい順（日付 → 撮影時刻）
+      items.sort((a, b) => (a.day === b.day ? (b.p.takenAt || 0) - (a.p.takenAt || 0) : a.day < b.day ? 1 : -1));
+
+      albumUrls.clear();
+      $('al-count').textContent = `${items.length}枚`;
+      const grid = $('album-grid');
+      grid.innerHTML = items.length ? '' : '<p class="empty" style="grid-column:1/-1">該当する写真はありません</p>';
+      const photos = items.map((it) => it.p);
+      const keys = items.map((it) => it.key);
+      items.forEach((it, i) => {
+        const div = document.createElement('div');
+        div.className = 'album-item';
+        div.innerHTML = '<img loading="lazy" alt=""><button class="fav-btn"></button>';
+        const img = div.querySelector('img');
+        img.src = albumUrls.get(it.p.blob);
+        img.alt = `${formatDay(it.day)}の写真`;
+        img.addEventListener('click', () => openViewer(photos, i, keys)); // 左右でアルバムの順に送れる
+        const fav = div.querySelector('.fav-btn');
+        setFavButton(fav, it.p.fav);
+        fav.addEventListener('click', () => flipFav(it.key, it.p, fav));
+        grid.appendChild(div);
+      });
+    }
+
+    // =====================================================
     // ページの切り替え（ボトムナビ）と設定
     // =====================================================
     document.querySelectorAll('.bottom-nav [data-page]').forEach((btn) => {
@@ -2134,9 +2395,40 @@
         document.querySelectorAll('.bottom-nav [data-page]').forEach((b) => b.classList.toggle('active', b === btn));
         document.querySelectorAll('.page').forEach((p) => p.classList.toggle('active', p.id === 'page-' + btn.dataset.page));
         window.scrollTo(0, 0);
+        if (btn.dataset.page === 'album') renderAlbum();
       });
     });
     $('nav-add').addEventListener('click', openAdder);
+
+    // 食事の時間帯（終了は開始より後になるように直す）
+    document.querySelectorAll('.set-time').forEach((row) => {
+      const meal = row.dataset.meal;
+      const start = row.querySelector('.t-start');
+      const end = row.querySelector('.t-end');
+      start.innerHTML = Array.from({ length: 24 }, (_, h) => `<option value="${h}">${h}</option>`).join('');
+      end.innerHTML = Array.from({ length: 24 }, (_, h) => `<option value="${h + 1}">${h + 1}</option>`).join('');
+      start.value = mealTimes[meal][0];
+      end.value = mealTimes[meal][1];
+      const save = (changed) => {
+        let s = Number(start.value);
+        let e = Number(end.value);
+        if (e <= s) {
+          if (changed === start) e = Math.min(24, s + 1);
+          else s = Math.max(0, e - 1);
+          start.value = s;
+          end.value = e;
+        }
+        mealTimes[meal] = [s, e];
+        try {
+          localStorage.setItem('meal-log-times', JSON.stringify(mealTimes));
+        } catch {
+          // 保存できなくても今回は使える
+        }
+        toast(`${TYPES[meal].label}は ${s}時〜${e}時 にしました`);
+      };
+      start.addEventListener('change', () => save(start));
+      end.addEventListener('change', () => save(end));
+    });
 
     document.querySelectorAll('input[name="camera"]').forEach((radio) => {
       radio.checked = radio.value === cameraSetting;
