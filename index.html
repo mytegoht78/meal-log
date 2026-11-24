@@ -489,7 +489,7 @@
     .ed-photo img {
       display: block;
       width: 100%;
-      aspect-ratio: 1;
+      aspect-ratio: 4 / 3;
       object-fit: cover;
       border-radius: 8px;
       cursor: pointer;
@@ -969,7 +969,7 @@
       border-radius: 8px;
       overflow: hidden;
       background: #eee;
-      aspect-ratio: 1;
+      aspect-ratio: 4 / 3;
     }
     .pick-item img {
       display: block;
@@ -1158,7 +1158,7 @@
     }
     .album-item {
       position: relative;
-      aspect-ratio: 1;
+      aspect-ratio: 4 / 3;
       background: #eee;
     }
     .album-item img {
@@ -1251,6 +1251,66 @@
     }
     .note.warn {
       color: #d33;
+    }
+
+    /* ----- ギャラリー写真の切り抜き ----- */
+    #cropper {
+      z-index: 18;
+      padding: 8px 16px 20px;
+      background: #111;
+      color: #fff;
+    }
+    .crop-top {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-bottom: 8px;
+    }
+    .crop-top h2 {
+      margin: 0;
+      font-size: 1.1em;
+    }
+    .crop-top .back-btn {
+      color: #fff;
+    }
+    .crop-stage {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      touch-action: none;
+    }
+    #crop-img {
+      display: block;
+      max-width: 100%;
+      max-height: 100%;
+      user-select: none;
+      -webkit-user-drag: none;
+      pointer-events: none;
+    }
+    /* 枠の外を暗くする */
+    #crop-frame {
+      position: absolute;
+      border: 2px solid #fff;
+      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6);
+      pointer-events: none;
+    }
+    .crop-hint {
+      margin: 10px 0 0;
+      color: #bbb;
+      font-size: 0.85em;
+      text-align: center;
+    }
+    .crop-actions {
+      margin-top: 12px;
+    }
+    .crop-actions .btn-sub {
+      border-color: #555;
+      background: #222;
+      color: #fff;
     }
 
     /* ----- 写真を縦に並べる表示 ----- */
@@ -1481,6 +1541,23 @@
         <span class="sun">日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span class="sat">土</span>
       </div>
       <div id="land-grid" class="cal-grid land-grid"></div>
+    </div>
+  </div>
+
+  <!-- ギャラリー写真の切り抜き -->
+  <div id="cropper" class="overlay">
+    <div class="crop-top">
+      <button id="crop-back" class="back-btn" aria-label="この写真をやめる">←</button>
+      <h2 id="crop-title">写真を切り抜く</h2>
+    </div>
+    <div id="crop-stage" class="crop-stage">
+      <img id="crop-img" alt="切り抜く写真" draggable="false">
+      <div id="crop-frame"></div>
+    </div>
+    <p class="crop-hint">枠を指で動かして、残す部分を選んでください</p>
+    <div class="actions crop-actions">
+      <button id="crop-orig" class="btn-sub">元のまま</button>
+      <button id="crop-ok" class="btn-main">4:3で切り抜く</button>
     </div>
   </div>
 
@@ -1933,7 +2010,6 @@
     async function flipFav(key, photo, button) {
       photo.fav = await toggleFav(key, photo.id);
       if (button) setFavButton(button, photo.fav);
-      toast(photo.fav ? 'お気に入りにしました' : 'お気に入りを外しました', 1500);
       refreshAll();
     }
     function setFavButton(button, on) {
@@ -2065,29 +2141,179 @@
         addTarget = null;
         const n = await addPhotosToSlot(day, type, photos);
         const where = `${formatDay(day)}の${TYPES[type].label}`;
-        if (n === photos.length) toast(`${where}に追加しました`);
-        else if (n > 0) toast(`${MAX_PHOTOS}枚までなので、${n}枚だけ追加しました`, 4000);
-        else toast(`${where}は${MAX_PHOTOS}枚まで登録済みです`, 4000);
+        // 全部追加できたときは画面で分かるので、お知らせは入りきらなかったときだけ
+        if (n === 0) toast(`${where}は${MAX_PHOTOS}枚まで登録済みです`, 4000);
+        else if (n < photos.length) toast(`${MAX_PHOTOS}枚までなので、${n}枚だけ追加しました`, 4000);
         refreshAll();
       } else if (adder) {
         addToAdder(photos);
       }
     }
 
+    // 追加先にあと何枚入るか（入らない写真の切り抜きを聞かないため）
+    async function incomingRoom() {
+      if (addTarget) {
+        const slot = await getSlot(slotKey(addTarget.day, addTarget.type));
+        return MAX_PHOTOS - (slot?.photos.length || 0);
+      }
+      return adder ? MAX_PHOTOS - adderShown().length : MAX_PHOTOS;
+    }
+
     async function handleFiles(files, sourceType) {
       if (files.length === 0) return;
-      toast('写真を読み込み中…', 0);
       try {
+        if (sourceType === 'gallery') {
+          // ギャラリーの写真は1枚ずつ「4:3で切り抜く／元のまま」を選ぶ
+          const room = await incomingRoom();
+          if (room <= 0) {
+            toast(`${MAX_PHOTOS}枚まで登録済みです`, 4000);
+            addTarget = null;
+            return;
+          }
+          if (files.length > room) {
+            toast(`${MAX_PHOTOS}枚までなので、${room}枚だけ追加します`, 4000);
+            files = files.slice(0, room);
+          }
+        }
         const photos = [];
-        for (const f of files) {
-          const takenAt = sourceType === 'gallery' ? (await readExifDate(f)) ?? f.lastModified : Date.now();
-          photos.push(await makePhoto(f, sourceType, f.size, takenAt));
+        for (let i = 0; i < files.length; i++) {
+          const f = files[i];
+          if (sourceType === 'gallery') {
+            const takenAt = (await readExifDate(f)) ?? f.lastModified;
+            if (i > 0) toast('', 1); // 前の写真の「読み込み中」を消してから聞く
+            const choice = await askCrop(f, i, files.length);
+            if (choice.mode === 'skip') continue;
+            toast('写真を読み込み中…', 0);
+            const source = choice.mode === 'crop' ? await cropToCanvas(f, choice.rect) : f;
+            photos.push(await makePhoto(source, sourceType, f.size, takenAt));
+          } else {
+            toast('写真を読み込み中…', 0);
+            photos.push(await makePhoto(f, sourceType, f.size, Date.now()));
+          }
         }
         toast('', 1);
+        if (photos.length === 0) {
+          addTarget = null;
+          return;
+        }
         await receivePhotos(photos);
       } catch (e) {
         toast('写真を読み込めませんでした：' + e.message, 5000);
       }
+    }
+
+    // =====================================================
+    // ギャラリー写真の切り抜き（横4：縦3 の枠を指で動かして、残す部分を選ぶ）
+    // もともと 4:3 の写真は聞かずにそのまま使う
+    // =====================================================
+    let cropState = null; // { resolve, rect(画像の実寸での枠), scale, frame(表示上の枠) }
+
+    function askCrop(file, index, count) {
+      return new Promise(async (resolve) => {
+        const url = URL.createObjectURL(file);
+        const img = $('crop-img');
+        img.src = url;
+        try {
+          await img.decode();
+        } catch {
+          URL.revokeObjectURL(url);
+          resolve({ mode: 'orig' }); // 表示できない形式は元のまま
+          return;
+        }
+        const ratio = img.naturalWidth / img.naturalHeight;
+        if (Math.abs(ratio - 4 / 3) < 0.02) {
+          URL.revokeObjectURL(url);
+          resolve({ mode: 'orig' });
+          return;
+        }
+        $('crop-title').textContent = count > 1 ? `写真を切り抜く（${index + 1}/${count}）` : '写真を切り抜く';
+        cropState = { resolve, done: false };
+        openLayer($('cropper'), {
+          onClose: () => {
+            URL.revokeObjectURL(url);
+            img.removeAttribute('src');
+            const s = cropState;
+            cropState = null;
+            if (s && !s.done) s.resolve({ mode: 'skip' }); // ← や「戻る」でこの写真をやめる
+          },
+        });
+        requestAnimationFrame(layoutCropFrame);
+      });
+    }
+
+    // 表示された画像に合わせて、できるだけ大きな 4:3 の枠を真ん中に置く
+    function layoutCropFrame() {
+      if (!cropState) return;
+      const img = $('crop-img');
+      const stage = $('crop-stage').getBoundingClientRect();
+      const r = img.getBoundingClientRect();
+      const w = r.width;
+      const h = r.height;
+      const fw = w / h > 4 / 3 ? h * (4 / 3) : w;
+      const fh = fw * (3 / 4);
+      cropState.box = { left: r.left - stage.left, top: r.top - stage.top, w, h };
+      cropState.frame = { x: (w - fw) / 2, y: (h - fh) / 2, w: fw, h: fh };
+      cropState.scale = img.naturalWidth / w;
+      drawCropFrame();
+    }
+    function drawCropFrame() {
+      const { box, frame } = cropState;
+      const el = $('crop-frame');
+      el.style.left = box.left + frame.x + 'px';
+      el.style.top = box.top + frame.y + 'px';
+      el.style.width = frame.w + 'px';
+      el.style.height = frame.h + 'px';
+    }
+
+    // 枠のドラッグ（画像の外には出ない）
+    {
+      let start = null;
+      const stage = $('crop-stage');
+      stage.addEventListener('pointerdown', (e) => {
+        if (!cropState?.frame) return;
+        start = { x: e.clientX, y: e.clientY, fx: cropState.frame.x, fy: cropState.frame.y };
+        try {
+          stage.setPointerCapture(e.pointerId);
+        } catch {
+          // 取れなくても動かせる
+        }
+      });
+      stage.addEventListener('pointermove', (e) => {
+        if (!start || !cropState) return;
+        const { box, frame } = cropState;
+        frame.x = Math.min(box.w - frame.w, Math.max(0, start.fx + e.clientX - start.x));
+        frame.y = Math.min(box.h - frame.h, Math.max(0, start.fy + e.clientY - start.y));
+        drawCropFrame();
+      });
+      const end = () => (start = null);
+      stage.addEventListener('pointerup', end);
+      stage.addEventListener('pointercancel', end);
+    }
+    addEventListener('resize', () => cropState && layoutCropFrame());
+
+    async function finishCrop(mode) {
+      if (!cropState) return;
+      const s = cropState;
+      s.done = true;
+      const { frame, scale } = s;
+      const rect = { x: frame.x * scale, y: frame.y * scale, w: frame.w * scale, h: frame.h * scale };
+      await closeLayer();
+      s.resolve(mode === 'crop' ? { mode, rect } : { mode });
+    }
+    $('crop-ok').addEventListener('click', () => finishCrop('crop'));
+    $('crop-orig').addEventListener('click', () => finishCrop('orig'));
+    $('crop-back').addEventListener('click', closeLayer);
+
+    // 選んだ範囲を切り抜いたキャンバス（長い辺1000pxまで）を作る
+    async function cropToCanvas(file, rect) {
+      const bitmap = await createImageBitmap(file); // 写真の向き（EXIF）を反映した画像
+      const scale = Math.min(1, 1000 / Math.max(rect.w, rect.h));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(rect.w * scale);
+      canvas.height = Math.round(rect.h * scale);
+      canvas.getContext('2d').drawImage(bitmap, rect.x, rect.y, rect.w, rect.h, 0, 0, canvas.width, canvas.height);
+      bitmap.close();
+      return canvas;
     }
 
     const cameraInput = $('camera-input');
@@ -2385,7 +2611,6 @@
         await commitSlot(day, type, removed, added, text);
         adder.done = true;
         closeLayer();
-        toast(`${formatDay(day)}の${TYPES[type].label}に保存しました`);
         refreshAll();
       } catch (e) {
         toast('保存に失敗しました：' + e.message, 5000);
@@ -2459,7 +2684,6 @@
             div.querySelector('.cal-tool').addEventListener('click', async () => {
               if (p.cal) await setCalendarPhoto(day, null, null);
               else await setCalendarPhoto(day, slot.key, p.id);
-              toast(p.cal ? 'カレンダー写真を自動に戻しました' : 'カレンダー写真にしました');
               refreshAll();
             });
             div.querySelector('img').src = editorUrls.get(p);
@@ -2473,7 +2697,6 @@
             div.querySelector('.remove').addEventListener('click', async () => {
               if (!confirm('この写真を削除しますか？')) return;
               await takePhoto(slot.key, p.id);
-              toast('削除しました');
               refreshAll();
             });
             grid.appendChild(div);
@@ -2605,9 +2828,7 @@
       document.querySelectorAll('.ed-sec.drop-ok, .ed-sec.drop-ng').forEach((s) => s.classList.remove('drop-ok', 'drop-ng'));
       if (!drop || !d.target) return;
       const moved = await movePhoto(d.slot.key, d.photo.id, d.target);
-      toast(moved
-        ? `${TYPES[d.target].label}へ移動しました`
-        : `${TYPES[d.target].label}は${MAX_PHOTOS}枚まで登録済みです`);
+      if (!moved) toast(`${TYPES[d.target].label}は${MAX_PHOTOS}枚まで登録済みです`);
       refreshAll();
     }
 
@@ -2704,7 +2925,6 @@
       await setCover(key, p.id);
       slot.cover = p.id;
       renderViewer();
-      toast('メイン写真にしました');
       refreshAll();
     });
     $('viewer-fav').addEventListener('click', () => {
@@ -2810,7 +3030,7 @@
     // ボタンの文字：「2026年11月 ▼」「2026年 ▼」「すべて ▼」「毎年11月 ▼」
     function ymLabel(year, month) {
       const y = Number(year);
-      const text = y ? (month ? `${y}年${month}月` : `${y}年`) : (month ? `毎年${month}月` : 'すべて');
+      const text = y ? (month ? `${y}年${month}月` : `${y}年`) : (month ? `毎年${month}月` : 'すべての期間');
       return `${text}<small>▼</small>`;
     }
 
@@ -2956,7 +3176,6 @@
         item.querySelector('.cover-btn').addEventListener('click', async () => {
           if (isCover) return;
           await setCover(key, p.id);
-          toast('メイン写真にしました');
           refreshAll();
         });
         list.appendChild(item);
@@ -3183,7 +3402,6 @@
           b.addEventListener('click', async () => {
             await setCalendarPhoto(day, s.key, p.id);
             await closeLayer();
-            toast('カレンダー写真にしました');
             refreshAll();
           });
           list.appendChild(b);
@@ -3342,7 +3560,6 @@
         } catch {
           // 保存できなくても今回は使える
         }
-        toast(`${TYPES[meal].label}は ${s}時〜${e}時 にしました`);
       };
       start.addEventListener('change', () => save(start));
       end.addEventListener('change', () => save(end));
@@ -3353,7 +3570,6 @@
       radio.addEventListener('change', () => {
         if (radio.checked) {
           setCameraSetting(radio.value);
-          toast(radio.value === 'quiet' ? '静音カメラを使います' : 'きれいなカメラを使います');
         }
       });
     });
