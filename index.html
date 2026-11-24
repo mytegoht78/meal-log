@@ -6,6 +6,11 @@
   <title>食事記録アプリ</title>
   <!-- 選んだカラーテーマを、画面を描く前に当てる（一瞬だけ別の色が見えないように） -->
   <script>
+    // サンプル表示（アドレスの最後が ?sample）のときは、設定などをスマホに保存しない
+    if (/[?&]sample\b/.test(location.search)) {
+      Storage.prototype.setItem = function () {};
+      Storage.prototype.removeItem = function () {};
+    }
     try {
       var savedTheme = localStorage.getItem('meal-log-theme');
       if (savedTheme && savedTheme !== 'warm') document.documentElement.dataset.theme = savedTheme;
@@ -2698,12 +2703,23 @@
       <div class="set-title"><i data-icon="download"></i>バックアップ</div>
       <button id="export-btn" class="backup-btn"><i data-icon="download"></i>バックアップを保存</button>
       <label for="import-file" class="backup-btn"><i data-icon="upload"></i>バックアップを読み込む</label>
-      <!-- 置き換えたあとだけ出る -->
+      <!-- 置き換えたあとだけ出る（サンプル表示では出さない） -->
       <div id="undo-box" class="undo-box" hidden>
         <p id="undo-text"></p>
         <button id="undo-btn" class="backup-btn">元に戻す</button>
       </div>
       <p class="set-note">保存したファイル（.mlbk）は「ダウンロード」に入ります。OneDriveアプリでアップロードしておくと、PCのChromeでこのアプリを開いて読み込めます。</p>
+    </div>
+    <!-- サンプル表示のときは出さない -->
+    <div id="sample-group" class="set-group">
+      <div class="set-title"><i data-icon="photo"></i>このアプリを紹介する</div>
+      <button id="sample-open" class="backup-btn">サンプルで試す</button>
+      <button id="sample-copy" class="backup-btn">サンプル用のリンクをコピー</button>
+      <p class="set-note">
+        自分の記録を隠して、サンプルの記録で操作を試せます。サンプルで変えた内容は保存されません。<br>
+        終わるときはアプリを閉じて、いつもどおり開き直してください。<br>
+        リンクを送ると、相手のスマホでも最初からサンプルで開きます。
+      </p>
     </div>
   </section>
 
@@ -2893,6 +2909,12 @@
     // 共通の部品
     // =====================================================
     const $ = (id) => document.getElementById(id);
+
+    // サンプル表示：アドレスの最後に ?sample を付けて開くと、本物の記録とは別の一時的な保管場所
+    // （meal-log-sample）を使い、サンプルの記録を入れて表示する。開くたびに作り直すので保存されない。
+    // 帯や「終わる」ボタンは出さない（本物らしさのため）。終わるときはアプリを閉じて普通に開き直す
+    const SAMPLE_MODE = /[?&]sample\b/.test(location.search);
+    const DB_NAME = SAMPLE_MODE ? 'meal-log-sample' : 'meal-log';
 
     // 線のアイコン（24×24、線の太さをそろえる。色は周りの文字色）
     const ICON_PATHS = {
@@ -3093,7 +3115,7 @@
     function getDB() {
       if (!dbPromise) {
         dbPromise = new Promise((resolve, reject) => {
-          const req = indexedDB.open('meal-log', 5);
+          const req = indexedDB.open(DB_NAME, 5);
           req.onupgradeneeded = () => {
             const db = req.result;
             const tx = req.transaction;
@@ -4832,7 +4854,8 @@
       html += '</table>';
 
       // ブラウザが教えてくれる概算（このアプリが使っている量 / 使える上限）
-      if (navigator.storage?.estimate) {
+      // サンプル表示では出さない（本物の記録の量も合わせた数字になるため）
+      if (navigator.storage?.estimate && !SAMPLE_MODE) {
         try {
           const { usage, quota } = await navigator.storage.estimate();
           const pct = quota ? Math.max(0.5, (usage / quota) * 100) : 0;
@@ -5322,7 +5345,7 @@
 
     // 設定･情報の「元に戻す」
     async function renderUndo() {
-      const info = await loadUndoInfo().catch(() => null);
+      const info = SAMPLE_MODE ? null : await loadUndoInfo().catch(() => null);
       $('undo-box').hidden = !info;
       if (info) {
         $('undo-text').textContent =
@@ -5346,7 +5369,129 @@
       }
     });
 
-    showList().catch((e) => toast('データを開けませんでした：' + e.message, 8000));
+    // =====================================================
+    // サンプル表示のデータ（写真は Unsplash の無料写真＝Unsplash ライセンス。画像はアプリに持たず、
+    // 開いたときにリンクから読み込む）。日付は「今日から何日前か」で書く
+    // =====================================================
+    const SAMPLE_DAYS = [
+      { ago: 0, breakfast: ['たまごかけご飯', '1761064776495-357b1f05dcca'], lunch: ['ラーメン', '1764158156827-0df193e9783c'] },
+      {
+        ago: 1, memo: '久しぶりに早起きした',
+        breakfast: ['和朝食', '1629684782790-385ed5adb497'],
+        lunch: ['お弁当', '1696677049263-cc38af1c7681'],
+        dinner: ['ハンバーグ', '1742626586945-47543e50fd82', '1658863173663-607c0feef366'],
+      },
+      {
+        ago: 2, memo: 'カフェでのんびり',
+        breakfast: ['パンケーキ', '*1528207776546-365bb710ee93'],
+        diary: ['カフェで読書', '1542372147193-a7aca54189cd'],
+        dinner: ['お寿司', '*1579584425555-c3ce17fd4351'],
+      },
+      { ago: 3, memo: '雨の一日', lunch: ['うどん', '1707201124182-099f3d98bb90'], dinner: ['餃子', '1738681336104-608b4e7dc3b0'] },
+      {
+        ago: 4, memo: '公園で落ち葉を集めた',
+        diary: ['公園の紅葉', '*1673434737111-193cfaa58f75', '1571514507804-28e1f9ab5b94'],
+        dinner: ['お鍋', '1766065886536-3b73b5c60139'],
+      },
+      { ago: 5, breakfast: ['トースト', '1623837543969-a980ab06b71e'], lunch: ['カレーライス', '1679279727895-bd5c9fb9c1a0'], dinner: ['焼き魚'] },
+      {
+        ago: 6, memo: '誕生日のお祝い',
+        lunch: ['サンドイッチ', '1553909489-cd47e0907980'],
+        dinner: ['焼き鳥', '1783788357923-649e29b7b006'],
+        diary: ['ケーキ', '*1757450296755-f875c2dc80bf'],
+      },
+      {
+        ago: 8,
+        breakfast: ['ホットサンド', '1550289829-59f2d4cd1296'],
+        lunch: ['焼き魚定食', '1653220329192-ce4d725d352a'],
+        dinner: ['とんかつ', '1569050467447-ce54b3bbc37d'],
+      },
+      { ago: 10, memo: '仕事が忙しかった', lunch: ['ペンネ', '1621996346565-e3dbc646d9a9'], diary: ['コーヒー豆を買った', '1511920170033-f8396924c348'] },
+      { ago: 13, memo: 'ゆっくり休んだ', breakfast: ['おにぎり'] },
+    ];
+    const SAMPLE_TIME = { breakfast: 7.5, lunch: 12.5, dinner: 19, diary: 15 }; // 撮った時刻（時）
+
+    async function prepareSample() {
+      // 前回のサンプルを消して作り直す
+      await new Promise((resolve) => {
+        const req = indexedDB.deleteDatabase(DB_NAME);
+        req.onsuccess = req.onerror = req.onblocked = () => resolve();
+      });
+      toast('読み込み中…', 0);
+      const jobs = [];
+      for (const d of SAMPLE_DAYS) {
+        const date = new Date();
+        date.setDate(date.getDate() - d.ago);
+        const day = dayKey(date);
+        for (const type of [...TYPE_ORDER, MEMO]) {
+          const v = d[type === MEMO ? 'memo' : type];
+          if (!v) continue;
+          if (type === MEMO) {
+            jobs.push(putSlot({ key: slotKey(day, MEMO), day, type: MEMO, photos: [], cover: null, text: v }));
+            continue;
+          }
+          const [text, ...ids] = v;
+          const at = new Date(date);
+          at.setHours(Math.floor(SAMPLE_TIME[type]), (SAMPLE_TIME[type] % 1) * 60, 0, 0);
+          jobs.push((async () => {
+            const photos = [];
+            for (const [i, raw] of ids.entries()) {
+              const fav = raw.startsWith('*'); // 先頭が * の写真はお気に入り
+              const id = raw.replace('*', '');
+              try {
+                const res = await fetch(`https://images.unsplash.com/photo-${id}?w=1000&h=750&fit=crop&q=70&fm=jpg`);
+                if (!res.ok) throw new Error(res.status);
+                const blob = await res.blob();
+                photos.push({
+                  id: `sample-${id}`, blob, width: 1000, height: 750, source: 'app', originalSize: blob.size,
+                  takenAt: at.getTime() + i * 60000, addedAt: at.getTime() + i * 60000, ...(fav ? { fav: true } : {}),
+                });
+              } catch {
+                // 読み込めなかった写真は入れない（文字だけ残る）
+              }
+            }
+            await putSlot({ key: slotKey(day, type), day, type, photos, cover: photos[0]?.id ?? null, text });
+          })());
+        }
+      }
+      await Promise.all(jobs);
+      toast('', 1);
+    }
+
+    // 設定･情報の「このアプリを紹介する」
+    const SAMPLE_URL = location.origin + location.pathname + '?sample';
+    $('sample-open').addEventListener('click', () => {
+      location.href = SAMPLE_URL;
+    });
+    $('sample-copy').addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(SAMPLE_URL);
+        toast('サンプル用のリンクをコピーしました');
+      } catch {
+        prompt('このリンクをコピーしてください', SAMPLE_URL);
+      }
+    });
+
+    // サンプル表示では、本物の記録に関わるもの（バックアップ・元に戻す・保存領域の量）を使わない
+    if (SAMPLE_MODE) {
+      $('sample-group').hidden = true;
+      const notHere = (e) => {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        toast('この表示ではバックアップは使えません');
+      };
+      $('export-btn').addEventListener('click', notHere, true);
+      document.querySelector('label[for="import-file"]').addEventListener('click', notHere, true);
+    }
+
+    (async () => {
+      try {
+        if (SAMPLE_MODE) await prepareSample();
+        await showList();
+      } catch (e) {
+        toast('データを開けませんでした：' + e.message, 8000);
+      }
+    })();
   </script>
 </body>
 </html>
