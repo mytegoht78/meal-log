@@ -25,6 +25,26 @@
     }
     * {
       box-sizing: border-box;
+      /* タップしたところに出る水色の残像を消す */
+      -webkit-tap-highlight-color: transparent;
+    }
+    /* アプリとして起動したときのアイコン表示（Android の起動画面から自然につなぐ） */
+    #splash {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      background: #fffaf3;
+      transition: opacity 0.3s;
+    }
+    #splash img {
+      width: 144px;
+      height: 144px;
+    }
+    #splash.fade {
+      opacity: 0;
     }
     body {
       font-family: sans-serif;
@@ -420,10 +440,46 @@
       outline: 3px solid var(--accent);
       outline-offset: -3px;
     }
-    .ed-photo .star,
+    .ed-img {
+      position: relative;
+      -webkit-touch-callout: none;
+      user-select: none;
+    }
+    .ed-img.dragging {
+      opacity: 0.35;
+    }
+    /* ドラッグ中の写真と、落とし先の枠 */
+    .drag-ghost {
+      position: fixed;
+      left: 0;
+      top: 0;
+      z-index: 50;
+      width: 80px;
+      height: 80px;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+      opacity: 0.9;
+      pointer-events: none;
+    }
+    .drag-ghost img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .ed-sec.drop-ok {
+      outline: 3px dashed var(--green);
+      outline-offset: -3px;
+      background: #eef7f1;
+    }
+    .ed-sec.drop-ng {
+      outline: 3px dashed #d33;
+      outline-offset: -3px;
+    }
     .ed-photo .remove {
       position: absolute;
       top: 4px;
+      right: 4px;
       width: 30px;
       height: 30px;
       padding: 0;
@@ -434,42 +490,40 @@
       font-size: 16px;
       line-height: 30px;
     }
-    .ed-photo .star {
-      left: 4px;
+    /* 写真の下の ★メイン ♡お気に入り 📅カレンダー */
+    .ed-tools {
+      display: flex;
+      gap: 4px;
+      margin-top: 4px;
     }
-    .ed-photo.cover .star {
-      background: var(--accent);
-    }
-    .ed-photo .remove {
-      right: 4px;
-    }
-    .ed-img {
-      position: relative;
-    }
-    .ed-photo .ed-fav {
-      position: absolute;
-      left: 4px;
-      bottom: 4px;
-      font-size: 16px;
-    }
-    .ed-photo .ed-cal {
-      position: absolute;
-      right: 4px;
-      bottom: 4px;
-      width: 30px;
+    .ed-tool {
+      flex: 1;
       height: 30px;
       padding: 0;
-      border: none;
-      border-radius: 50%;
-      background: rgba(0, 0, 0, 0.55);
-      font-size: 15px;
-      line-height: 30px;
-      filter: grayscale(1);
-    }
-    .ed-photo .ed-cal.on {
+      border: 1px solid #ddd;
+      border-radius: 6px;
       background: #fff;
+      color: #aaa;
+      font-size: 16px;
+      line-height: 28px;
+    }
+    .ed-tool.on {
+      border-color: var(--accent);
+      background: #fff3e8;
+      color: var(--accent);
+    }
+    .ed-tool.fav-tool.on {
+      border-color: #e5527a;
+      background: #fdeef3;
+      color: #e5527a;
+    }
+    .ed-tool.cal-tool {
+      filter: grayscale(1);
+      opacity: 0.5;
+    }
+    .ed-tool.cal-tool.on {
       filter: none;
-      box-shadow: 0 0 0 2px var(--accent);
+      opacity: 1;
     }
     .ed-text {
       width: 100%;
@@ -1202,6 +1256,19 @@
   </style>
 </head>
 <body>
+  <!-- アプリとして起動したときだけ、アイコンを1秒見せてから消す -->
+  <div id="splash"><img src="icon-512.png" alt=""></div>
+  <script>
+    (function () {
+      if (!matchMedia('(display-mode: standalone)').matches) return;
+      const splash = document.getElementById('splash');
+      splash.style.display = 'flex';
+      setTimeout(function () {
+        splash.classList.add('fade');
+        setTimeout(function () { splash.remove(); }, 350);
+      }, 1000);
+    })();
+  </script>
   <!-- ホーム -->
   <section id="page-home" class="page active">
     <div class="filter">
@@ -1527,17 +1594,33 @@
       if (ms) toastTimer = setTimeout(() => el.classList.remove('show'), ms);
     }
 
-    // 写真の表示用URL（同じ写真には同じURLを使い回し、不要になったら解放）
+    // 写真の表示用URL。写真のidごとに同じURLを使い回す
+    // （描き直しのたびにURLを作り直すと、画像を読み直す間に一瞬消えて点滅するため）
+    //   renew() … 描き直しの最初に呼ぶ。前回も今回も使わなかったURLだけ解放する
+    //   clear() … 画面を閉じるときに全部解放する
     function makeUrlCache() {
-      const map = new Map();
+      let current = new Map();
+      let previous = new Map();
+      const keyOf = (photo) => photo.id || photo.blob;
       return {
-        get(blob) {
-          if (!map.has(blob)) map.set(blob, URL.createObjectURL(blob));
-          return map.get(blob);
+        get(photo) {
+          const key = keyOf(photo);
+          if (!current.has(key)) {
+            current.set(key, previous.get(key) || URL.createObjectURL(photo.blob));
+            previous.delete(key);
+          }
+          return current.get(key);
+        },
+        renew() {
+          previous.forEach((url) => URL.revokeObjectURL(url));
+          previous = current;
+          current = new Map();
         },
         clear() {
-          map.forEach((url) => URL.revokeObjectURL(url));
-          map.clear();
+          current.forEach((url) => URL.revokeObjectURL(url));
+          previous.forEach((url) => URL.revokeObjectURL(url));
+          current = new Map();
+          previous = new Map();
         },
       };
     }
@@ -2114,7 +2197,7 @@
         div.className = 'add-slot';
         div.innerHTML = `<img alt="写真${i + 1}"><button class="remove" aria-label="外す">×</button>` +
           (isNew ? '<span class="new">追加</span>' : '');
-        div.querySelector('img').src = adderUrls.get(p.blob);
+        div.querySelector('img').src = adderUrls.get(p);
         div.querySelector('img').addEventListener('click', () => openViewer(shown, i, null));
         div.querySelector('.remove').addEventListener('click', () => {
           if (isNew) adder.added = adder.added.filter((x) => x !== p);
@@ -2229,15 +2312,17 @@
       const day = editingDay;
       const slots = await getDaySlots(day);
       if (editingDay !== day) return;
-      editorUrls.clear();
+      editorUrls.renew();
       const body = $('ed-body');
-      body.innerHTML = '';
+      body.innerHTML = '<p class="set-note" style="margin:0 0 4px">写真を長押しして別の枠へドラッグすると、種類を移動できます</p>';
 
       for (const type of TYPE_ORDER) {
         const slot = slots.find((s) => s.type === type);
         const sec = document.createElement('section');
         sec.className = 'ed-sec';
         const count = slot?.photos.length || 0;
+        sec.dataset.type = type; // ドラッグ＆ドロップの落とし先
+        sec.dataset.count = count;
         sec.innerHTML = `
           <div class="ed-head">${TYPES[type].icon} ${TYPES[type].label}
             ${count < MAX_PHOTOS ? '<button class="ed-add">＋追加</button>' : ''}
@@ -2256,10 +2341,12 @@
             div.innerHTML = `
               <div class="ed-img">
                 <img alt="写真${i + 1}">
-                <button class="star" aria-label="メインにする">${isCover ? '★' : '☆'}</button>
                 <button class="remove" aria-label="削除">×</button>
-                <button class="fav-btn ed-fav"></button>
-                <button class="ed-cal${p.cal ? ' on' : ''}" aria-label="${p.cal ? 'カレンダー写真をやめる' : 'カレンダー写真にする'}">📅</button>
+              </div>
+              <div class="ed-tools">
+                <button class="ed-tool star-tool${isCover ? ' on' : ''}" aria-label="メインにする">${isCover ? '★' : '☆'}</button>
+                <button class="ed-tool fav-tool"></button>
+                <button class="ed-tool cal-tool${p.cal ? ' on' : ''}" aria-label="${p.cal ? 'カレンダー写真をやめる' : 'カレンダー写真にする'}">📅</button>
               </div>
               <select aria-label="種類を移動">
                 ${TYPE_ORDER.map((t) => {
@@ -2268,19 +2355,21 @@
                   return `<option value="${t}"${full ? ' disabled' : ''}>${TYPES[t].label}${full ? '（3枚）' : 'へ移動'}</option>`;
                 }).join('')}
               </select>`;
-            const fav = div.querySelector('.ed-fav');
+            const fav = div.querySelector('.fav-tool');
             setFavButton(fav, p.fav);
             fav.addEventListener('click', () => flipFav(slot.key, p, fav));
             // カレンダー写真（1日1枚）。もう一度押すと自動に戻る
-            div.querySelector('.ed-cal').addEventListener('click', async () => {
+            div.querySelector('.cal-tool').addEventListener('click', async () => {
               if (p.cal) await setCalendarPhoto(day, null, null);
               else await setCalendarPhoto(day, slot.key, p.id);
               toast(p.cal ? 'カレンダー写真を自動に戻しました' : 'カレンダー写真にしました');
               refreshAll();
             });
-            div.querySelector('img').src = editorUrls.get(p.blob);
+            div.querySelector('img').src = editorUrls.get(p);
+            div.querySelector('img').draggable = false;
             div.querySelector('img').addEventListener('click', () => openViewer(slot.photos, i, slot.key));
-            div.querySelector('.star').addEventListener('click', async () => {
+            bindPhotoDrag(div.querySelector('.ed-img'), slot, p, editorUrls.get(p));
+            div.querySelector('.star-tool').addEventListener('click', async () => {
               await setCover(slot.key, p.id);
               refreshAll();
             });
@@ -2312,6 +2401,124 @@
       sec.innerHTML = '<div class="ed-head">💬 ひとこと</div>';
       sec.appendChild(makeTextInput(day, MEMO, memo?.text, '例：公園に遊びに行った'));
       body.appendChild(sec);
+    }
+
+    // =====================================================
+    // 編集画面のドラッグ＆ドロップ
+    // 写真を長押し（0.4秒）で持ち上げ、別の種類の枠の上で離すと移動。
+    // 画面の上端・下端に近づけると自動でスクロールする
+    // =====================================================
+    let drag = null; // { slot, photo, box, ghost, x, y, target, raf }
+    // 持ち上げている間は画面がスクロールしないようにする
+    document.addEventListener('touchmove', (e) => {
+      if (drag) e.preventDefault();
+    }, { passive: false });
+
+    function bindPhotoDrag(box, slot, photo, url) {
+      let timer = null;
+      let start = null;
+      let suppressClick = false;
+      const cancelTimer = () => {
+        clearTimeout(timer);
+        timer = null;
+      };
+      box.addEventListener('pointerdown', (e) => {
+        if (e.target.closest('.remove') || (e.pointerType === 'mouse' && e.button !== 0)) return;
+        start = [e.clientX, e.clientY];
+        const id = e.pointerId;
+        timer = setTimeout(() => {
+          timer = null;
+          suppressClick = true;
+          try {
+            box.setPointerCapture(id);
+          } catch {
+            // 取れなくても動く
+          }
+          startDrag(slot, photo, url, box, start[0], start[1]);
+        }, 400);
+      });
+      box.addEventListener('pointermove', (e) => {
+        if (timer && Math.hypot(e.clientX - start[0], e.clientY - start[1]) > 10) cancelTimer(); // スクロールしようとした
+        if (drag && drag.box === box) moveDrag(e.clientX, e.clientY);
+      });
+      box.addEventListener('pointerup', () => {
+        cancelTimer();
+        if (drag && drag.box === box) endDrag(true);
+      });
+      box.addEventListener('pointercancel', () => {
+        cancelTimer();
+        if (drag && drag.box === box) endDrag(false);
+      });
+      box.addEventListener('contextmenu', (e) => e.preventDefault()); // 画像の長押しメニューを出さない
+      // 持ち上げた後の click で拡大表示が開かないように
+      box.addEventListener('click', (e) => {
+        if (!suppressClick) return;
+        suppressClick = false;
+        e.stopPropagation();
+        e.preventDefault();
+      }, true);
+    }
+
+    function startDrag(slot, photo, url, box, x, y) {
+      if (navigator.vibrate) navigator.vibrate(15);
+      const ghost = document.createElement('div');
+      ghost.className = 'drag-ghost';
+      ghost.innerHTML = '<img alt="">';
+      ghost.querySelector('img').src = url;
+      document.body.appendChild(ghost);
+      box.classList.add('dragging');
+      drag = { slot, photo, box, ghost, x, y, target: null, raf: 0 };
+      moveDrag(x, y);
+      const loop = () => {
+        if (!drag) return;
+        autoScrollEditor();
+        drag.raf = requestAnimationFrame(loop);
+      };
+      drag.raf = requestAnimationFrame(loop);
+    }
+
+    function moveDrag(x, y) {
+      drag.x = x;
+      drag.y = y;
+      drag.ghost.style.transform = `translate(${x - 40}px, ${y - 40}px)`;
+      updateDropTarget();
+    }
+
+    // 指の下の枠に印を付ける（入れられる＝緑、3枚で満杯＝赤）
+    function updateDropTarget() {
+      document.querySelectorAll('.ed-sec.drop-ok, .ed-sec.drop-ng').forEach((s) => s.classList.remove('drop-ok', 'drop-ng'));
+      drag.target = null;
+      const sec = document.elementFromPoint(drag.x, drag.y)?.closest('.ed-sec[data-type]');
+      if (!sec || sec.dataset.type === drag.slot.type) return;
+      const full = Number(sec.dataset.count) >= MAX_PHOTOS;
+      sec.classList.add(full ? 'drop-ng' : 'drop-ok');
+      if (!full) drag.target = sec.dataset.type;
+    }
+
+    function autoScrollEditor() {
+      const edge = 70;
+      let v = 0;
+      if (drag.y < edge) v = -(edge - drag.y) / 4;
+      else if (drag.y > innerHeight - edge) v = (drag.y - (innerHeight - edge)) / 4;
+      if (v) {
+        $('day-editor').scrollTop += v;
+        updateDropTarget();
+      }
+    }
+
+    async function endDrag(drop) {
+      const d = drag;
+      drag = null;
+      cancelAnimationFrame(d.raf);
+      d.ghost.remove();
+      d.box.classList.remove('dragging');
+      document.querySelectorAll('.ed-sec.drop-ok, .ed-sec.drop-ng').forEach((s) => s.classList.remove('drop-ok', 'drop-ng'));
+      if (!drop || !d.target) return;
+      const moved = await movePhoto(d.slot.key, d.photo.id, d.target);
+      toast(moved
+        ? `${TYPES[d.target].label}へ移動しました`
+        : `${TYPES[d.target].label}は${MAX_PHOTOS}枚まで登録済みです`);
+      refreshAll();
     }
 
     // 編集画面の文字欄（入力を終えたら保存。編集画面は描き直さない）
@@ -2459,7 +2666,7 @@
     async function showList() {
       const list = $('list');
       const all = await getAllSlots();
-      listUrls.clear();
+      listUrls.renew();
 
       // 年の選択肢：記録がある年と今年
       const years = [...new Set([new Date().getFullYear(), ...all.map((s) => Number(s.day.slice(0, 4)))])]
@@ -2527,7 +2734,7 @@
             const img = document.createElement('img');
             img.alt = `${formatDay(day)}の${TYPES[type].label}`;
             img.loading = 'lazy';
-            img.src = listUrls.get(slot.photos[coverIndex].blob);
+            img.src = listUrls.get(slot.photos[coverIndex]);
             box.appendChild(img);
             if (slot.photos.length > 1) {
               box.insertAdjacentHTML('beforeend', `<span class="badge">❐${slot.photos.length}</span>`);
@@ -2582,7 +2789,7 @@
       const slot = await getSlot(key);
       if (stackKey !== key) return;
       if (!slot || slot.photos.length === 0) return closeLayer(); // 写真がなくなった
-      stackUrls.clear();
+      stackUrls.renew();
       $('stack-title').textContent = `${formatDay(slot.day)}　${TYPES[slot.type].label}`;
       $('stack-text').textContent = slot.text || '';
       const list = $('stack-list');
@@ -2597,7 +2804,7 @@
         const fav = item.querySelector('.fav-btn');
         setFavButton(fav, p.fav);
         fav.addEventListener('click', () => flipFav(key, p, fav));
-        item.querySelector('img').src = stackUrls.get(p.blob);
+        item.querySelector('img').src = stackUrls.get(p);
         item.querySelector('img').addEventListener('click', () => openViewer(slot.photos, i, key));
         item.querySelector('.cover-btn').addEventListener('click', async () => {
           if (isCover) return;
@@ -2651,7 +2858,7 @@
       // 新しい順（日付 → 撮影時刻）
       items.sort((a, b) => (a.day === b.day ? (b.p.takenAt || 0) - (a.p.takenAt || 0) : a.day < b.day ? 1 : -1));
 
-      albumUrls.clear();
+      albumUrls.renew();
       $('al-count').textContent = `${items.length}枚`;
       const grid = $('album-grid');
       grid.innerHTML = items.length ? '' : '<p class="empty" style="grid-column:1/-1">該当する写真はありません</p>';
@@ -2662,7 +2869,7 @@
         div.className = 'album-item';
         div.innerHTML = '<img loading="lazy" alt=""><button class="fav-btn"></button>';
         const img = div.querySelector('img');
-        img.src = albumUrls.get(it.p.blob);
+        img.src = albumUrls.get(it.p);
         img.alt = `${formatDay(it.day)}の写真`;
         img.addEventListener('click', () => openViewer(photos, i, keys)); // 左右でアルバムの順に送れる
         const fav = div.querySelector('.fav-btn');
@@ -2713,7 +2920,7 @@
         if (!byDay.has(s.day)) byDay.set(s.day, []);
         byDay.get(s.day).push(s);
       }
-      calUrls.clear();
+      calUrls.renew();
       $('cal-title').textContent = `${y}年${m + 1}月`;
       $('land-title').textContent = `${y}年${m + 1}月`;
       const now = new Date();
@@ -2744,7 +2951,7 @@
           const img = document.createElement('img');
           img.loading = 'lazy';
           img.alt = '';
-          img.src = calUrls.get(photo.blob);
+          img.src = calUrls.get(photo);
           cell.appendChild(img);
           cell.classList.add('has-photo');
         } else if (list.length) {
@@ -2812,7 +3019,7 @@
           const b = document.createElement('button');
           b.className = 'pick-item' + (p.id === shown?.id ? ' selected' : '');
           b.innerHTML = `<img alt=""><span>${TYPES[s.type].label}${p.fav ? ' ♥' : ''}</span>`;
-          b.querySelector('img').src = pickUrls.get(p.blob);
+          b.querySelector('img').src = pickUrls.get(p);
           b.addEventListener('click', async () => {
             await setCalendarPhoto(day, s.key, p.id);
             await closeLayer();
