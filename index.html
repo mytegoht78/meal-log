@@ -2408,6 +2408,45 @@
     #imp-add b {
       color: var(--accent-ink);
     }
+    /* テキストから取り込む */
+    .ti-text {
+      display: block;
+      width: 100%;
+      margin: 8px 0;
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--card);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.85em;
+      resize: vertical;
+    }
+    .ti-preview {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      font-size: 0.88em;
+      line-height: 1.6;
+    }
+    .ti-preview b {
+      color: var(--text);
+    }
+    .ti-ex {
+      margin-top: 6px;
+      padding: 6px 8px;
+      border-radius: 6px;
+      background: var(--tile);
+      color: var(--ink2);
+      font-size: 0.92em;
+      word-break: break-all;
+    }
+    .ti-err {
+      margin-top: 8px;
+      color: #c0392b;
+      font-size: 0.9em;
+    }
     /* 置き換えたあとに出る「元に戻す」 */
     .undo-box {
       margin-top: 12px;
@@ -2710,6 +2749,25 @@
         <button id="undo-btn" class="backup-btn">元に戻す</button>
       </div>
       <p class="set-note">保存したファイル（.mlbk）は「ダウンロード」に入ります。OneDriveアプリでアップロードしておくと、PCのChromeでこのアプリを開いて読み込めます。</p>
+    </div>
+    <!-- Excel などの記録を貼り付けて取り込む（サンプル表示のときは出さない） -->
+    <div id="text-import-group" class="set-group">
+      <div class="set-title"><i data-icon="upload"></i>テキストから取り込む</div>
+      <p class="set-note">
+        Excel などの「日付・朝食・昼食・夕食」の4列（タブ区切り）を、そのまま貼り付けてください。日付は 26/01/13 の形です。<br>
+        料理名・メモとして入ります。アプリ側にすでに文字がある食事は、そのまま残します。
+      </p>
+      <textarea id="ti-text" class="ti-text" rows="6" placeholder="26/01/13	おにぎり	パスタ＠ガスト	ラーメン、餃子"></textarea>
+      <button id="ti-check" class="backup-btn">内容を確認</button>
+      <div id="ti-preview" class="ti-preview" hidden>
+        <div id="ti-summary"></div>
+        <div id="ti-examples"></div>
+        <div id="ti-errors"></div>
+        <div class="actions">
+          <button id="ti-cancel" class="btn-sub">やめる</button>
+          <button id="ti-run" class="btn-main">取り込む</button>
+        </div>
+      </div>
     </div>
     <!-- サンプル表示のときは出さない -->
     <div id="sample-group" class="set-group">
@@ -5341,10 +5399,11 @@
         db.close();
       }
     }
-    const saveUndo = (slots) => undoTx('readwrite', (st, meta) => {
+    // what：何をする前の状態か（'置き換え' / 'テキスト取り込み'）
+    const saveUndo = (slots, what = '置き換え') => undoTx('readwrite', (st, meta) => {
       st.clear();
       slots.forEach((s) => st.put(s));
-      meta.put({ k: 'info', savedAt: Date.now(), ...countData(slots) });
+      meta.put({ k: 'info', savedAt: Date.now(), what, ...countData(slots) });
     });
     const loadUndoInfo = () => undoTx('readonly', (st, meta) => meta.get('info'));
     const loadUndoSlots = () => undoTx('readonly', (st) => st.getAll());
@@ -5359,25 +5418,135 @@
       $('undo-box').hidden = !info;
       if (info) {
         $('undo-text').textContent =
-          `${formatStamp(info.savedAt)} に置き換える前の状態（${info.days}日分・写真${info.photos}枚）に戻せます`;
+          `${formatStamp(info.savedAt)} の${info.what || '置き換え'}より前の状態（${info.days}日分・写真${info.photos}枚）に戻せます`;
       }
     }
     $('undo-btn').addEventListener('click', async () => {
       const info = await loadUndoInfo();
       if (!info) return;
       const current = countData(await getAllSlots());
-      if (!confirm(`置き換える前の状態（${info.days}日分・写真${info.photos}枚）に戻します。\n` +
+      const what = info.what || '置き換え';
+      if (!confirm(`${what}より前の状態（${info.days}日分・写真${info.photos}枚）に戻します。\n` +
         `今のデータ（${current.days}日分・写真${current.photos}枚）は、その状態に入れ替わります。よろしいですか？`)) return;
       toast('元に戻しています…', 0);
       try {
         await replaceAllSlots(await loadUndoSlots());
         await clearUndo();
-        toast('置き換える前の状態に戻しました', 4000);
+        toast(`${what}より前の状態に戻しました`, 4000);
         refreshAll();
       } catch (e) {
         toast('元に戻せませんでした：' + e.message, 6000);
       }
     });
+
+    // =====================================================
+    // テキストから取り込む（Excel などからコピーした「日付・朝食・昼食・夕食」のタブ区切り）
+    //   ・日付は 26/01/13（2桁の年は 2000年代）。4桁の年 2016/01/13 も読める
+    //   ・空欄は取り込まない。「✕」「？」なども文字のまま入れる
+    //   ・アプリ側にすでに文字がある食事は、そのまま残す（写真だけの食事には文字を足す）
+    //   ・取り込む前の状態は「元に戻す」で1回だけ戻せる
+    // =====================================================
+    const TI_COLS = ['breakfast', 'lunch', 'dinner']; // 日付の次の列から順に
+    let tiParsed = null; // { entries: Map(key → {day, type, text}), days, errors, examples, skipped }
+
+    function parseImportText(raw) {
+      const entries = new Map();
+      const errors = [];
+      const examples = [];
+      const days = new Set();
+      raw.split(/\r?\n/).forEach((line, i) => {
+        const cols = line.split('\t');
+        if (cols.every((c) => !c.trim())) return; // 空の行
+        const m = cols[0].trim().match(/^(\d{2}|\d{4})[/／.-](\d{1,2})[/／.-](\d{1,2})$/);
+        const y = m && (m[1].length === 2 ? 2000 + Number(m[1]) : Number(m[1]));
+        const date = m && new Date(y, Number(m[2]) - 1, Number(m[3]));
+        if (!m || date.getMonth() !== Number(m[2]) - 1 || date.getDate() !== Number(m[3])) {
+          errors.push({ line: i + 1, text: line.trim().slice(0, 40) });
+          return;
+        }
+        const day = dayKey(date);
+        const meals = [];
+        TI_COLS.forEach((type, c) => {
+          const text = (cols[c + 1] || '').replace(/^[\s　]+|[\s　]+$/g, '');
+          if (!text) return;
+          const key = slotKey(day, type);
+          if (!entries.has(key)) entries.set(key, { day, type, text }); // 同じ日が2回あれば最初の行を使う
+          meals.push(`${TYPES[type].label}：${text}`);
+        });
+        if (meals.length) {
+          days.add(day);
+          if (examples.length < 3) examples.push(`${formatDay(day)}　${meals.join('　')}`);
+        }
+      });
+      return { entries, days, errors, examples };
+    }
+
+    $('ti-check').addEventListener('click', async () => {
+      const p = parseImportText($('ti-text').value);
+      if (p.entries.size === 0) {
+        toast(p.errors.length ? '日付として読める行がありません（日付は 26/01/13 の形です）' : '貼り付けた内容がありません', 4000);
+        return;
+      }
+      // アプリ側にすでに文字がある食事は取り込まない
+      const current = new Map((await getAllSlots()).map((s) => [s.key, s]));
+      let kept = 0;
+      for (const [key] of p.entries) if (current.get(key)?.text) kept++;
+      const sorted = [...p.days].sort();
+      tiParsed = p;
+      $('ti-summary').innerHTML =
+        `<b>${p.days.size}日分・${p.entries.size - kept}件の食事を取り込みます</b><br>` +
+        `${formatDay(sorted[0])} 〜 ${formatDay(sorted[sorted.length - 1])}` +
+        (kept ? `<br>アプリ側にすでに文字がある ${kept}件は、そのまま残します` : '');
+      $('ti-examples').innerHTML = p.examples.map((e) => `<div class="ti-ex">${escapeHtml(e)}</div>`).join('');
+      $('ti-errors').innerHTML = p.errors.length
+        ? `<div class="ti-err">日付として読めない ${p.errors.length}行は取り込みません：<br>` +
+          p.errors.slice(0, 8).map((e) => `${e.line}行目「${escapeHtml(e.text)}」`).join('<br>') +
+          (p.errors.length > 8 ? `<br>ほか ${p.errors.length - 8}行` : '') + '</div>'
+        : '';
+      $('ti-preview').hidden = false;
+      $('ti-preview').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    });
+
+    $('ti-cancel').addEventListener('click', () => {
+      tiParsed = null;
+      $('ti-preview').hidden = true;
+    });
+
+    $('ti-run').addEventListener('click', async () => {
+      const p = tiParsed;
+      if (!p) return;
+      $('ti-run').disabled = true;
+      toast('取り込み中…', 0);
+      try {
+        const all = await getAllSlots();
+        const current = new Map(all.map((s) => [s.key, s]));
+        const changed = [];
+        for (const [key, e] of p.entries) {
+          const slot = current.get(key);
+          if (slot?.text) continue; // アプリ側優先
+          if (slot) changed.push({ ...slot, text: e.text });
+          else changed.push({ key, day: e.day, type: e.type, photos: [], cover: null, text: e.text });
+        }
+        await saveUndo(all, 'テキスト取り込み');
+        await putManySlots(changed);
+        tiParsed = null;
+        $('ti-preview').hidden = true;
+        $('ti-text').value = '';
+        toast(`取り込みました：${p.days.size}日分・${changed.length}件`, 5000);
+        refreshAll();
+      } catch (e) {
+        toast('取り込みに失敗しました：' + e.message, 6000);
+      } finally {
+        $('ti-run').disabled = false;
+      }
+    });
+
+    // たくさんの記録を1回の書き込みでまとめて保存する
+    const putManySlots = (slots) => serial(() => withStore('readwrite', (st) => {
+      let last = null;
+      for (const s of slots) last = st.put(s);
+      return last || st.count();
+    }));
 
     // =====================================================
     // サンプル表示のデータ（写真は Unsplash の無料写真＝Unsplash ライセンス。画像はアプリに持たず、
@@ -5485,6 +5654,7 @@
     // サンプル表示では、本物の記録に関わるもの（バックアップ・元に戻す・保存領域の量）を使わない
     if (SAMPLE_MODE) {
       $('sample-group').hidden = true;
+      $('text-import-group').hidden = true;
       const notHere = (e) => {
         e.preventDefault();
         e.stopImmediatePropagation();
