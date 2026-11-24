@@ -16,12 +16,19 @@
   <style>
     :root {
       --accent: #ff8a3d;
+      --star: #f2b000; /* メイン写真の★ */
       --green: #4a8f6a;
       --blue: #4a76a8;
       --bg: #fffaf3;
       --text: #333;
       --sub: #888;
       --line: #e8e0d4;
+    }
+    /* 画面を下に引っ張ったときのページ更新（プル・トゥ・リフレッシュ）を止める */
+    html,
+    body,
+    .overlay {
+      overscroll-behavior-y: none;
     }
     * {
       box-sizing: border-box;
@@ -128,16 +135,64 @@
       margin: 0 0 8px;
       font-size: 1em;
     }
-    .filter select {
-      padding: 6px 4px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      background: #fff;
-      font-family: inherit;
-      font-size: 1em;
+    /* 「2026年11月 ▼」 */
+    .ym-btn {
+      padding: 4px 2px;
+      border: none;
+      background: none;
+      color: var(--text);
+      font-size: 1.25em;
+      font-weight: bold;
     }
-    .filter select + select {
+    .ym-btn small {
       margin-left: 4px;
+      color: var(--sub);
+      font-size: 0.6em;
+      vertical-align: 2px;
+    }
+    /* ドラム式の選択（真ん中の帯に来たものが選ばれる） */
+    .wheel-wrap {
+      position: relative;
+      display: flex;
+      gap: 8px;
+      height: 200px;
+    }
+    .wheel {
+      flex: 1;
+      height: 200px;
+      padding: 80px 0;
+      overflow-y: auto;
+      scroll-snap-type: y mandatory;
+      scrollbar-width: none;
+      overscroll-behavior: contain;
+      -webkit-mask-image: linear-gradient(transparent, #000 35%, #000 65%, transparent);
+      mask-image: linear-gradient(transparent, #000 35%, #000 65%, transparent);
+    }
+    .wheel::-webkit-scrollbar {
+      display: none;
+    }
+    .wheel div {
+      height: 40px;
+      color: var(--sub);
+      font-size: 1.15em;
+      line-height: 40px;
+      text-align: center;
+      scroll-snap-align: center;
+    }
+    .wheel div.sel {
+      color: var(--text);
+      font-weight: bold;
+    }
+    .wheel-band {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 80px;
+      height: 40px;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 138, 61, 0.07);
+      pointer-events: none;
     }
     .empty {
       color: var(--sub);
@@ -377,13 +432,24 @@
       font-size: 1.2em;
       margin: 0;
     }
-    .ed-top button {
-      margin-left: auto;
-      padding: 8px 16px;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      background: #fff;
+    /* 左上の ← 戻るボタン（全画面で開く画面に共通） */
+    .back-btn {
+      flex: none;
+      width: 44px;
+      height: 40px;
+      margin-left: -8px;
+      padding: 0;
+      border: none;
+      background: none;
       color: inherit;
+      font-size: 1.6em;
+      line-height: 40px;
+    }
+    .ed-top {
+      gap: 4px;
+    }
+    .spacer {
+      flex: 1;
     }
     .ed-sec {
       background: #fff;
@@ -429,7 +495,7 @@
       cursor: pointer;
     }
     .ed-photo.cover img {
-      outline: 3px solid var(--accent);
+      outline: 3px solid var(--star);
       outline-offset: -3px;
     }
     .ed-img {
@@ -504,6 +570,11 @@
       background: #fff3e8;
       color: var(--accent);
     }
+    .ed-tool.star-tool.on {
+      border-color: var(--star);
+      background: #fff8dc;
+      color: var(--star);
+    }
     .ed-tool.fav-tool.on {
       border-color: #e5527a;
       background: #fdeef3;
@@ -538,7 +609,7 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 8px 8px 8px 16px;
+      padding: 8px 12px 8px 8px;
     }
     #viewer-cover {
       padding: 6px 12px;
@@ -549,16 +620,13 @@
       font-size: 0.85em;
     }
     #viewer-cover.is-cover {
-      border-color: var(--accent);
-      background: var(--accent);
+      border-color: var(--star);
+      background: var(--star);
+      color: #3d2e00;
     }
     #viewer-close {
-      margin-left: auto;
-      border: none;
-      background: none;
+      margin-left: 0;
       color: #fff;
-      font-size: 1.8em;
-      padding: 0 12px;
     }
     #viewer-img {
       flex: 1;
@@ -886,6 +954,11 @@
       color: inherit;
       font-size: 1.2em;
     }
+    .land-head .back-btn {
+      border: none;
+      background: none;
+      font-size: 1.5em;
+    }
     .land-grid {
       flex: 1;
       min-height: 0;
@@ -1005,6 +1078,9 @@
     }
     .heart.on {
       color: #e5527a;
+    }
+    .star-mark {
+      color: var(--star);
     }
     .heart-svg {
       display: block;
@@ -1166,19 +1242,15 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 8px 8px 4px 16px;
+      padding: 8px 12px 4px 8px;
     }
     .stack-top h2 {
       margin: 0;
       font-size: 1em;
     }
     #stack-close {
-      margin-left: auto;
-      padding: 0 12px;
-      border: none;
-      background: none;
+      margin-left: 0;
       color: #fff;
-      font-size: 1.8em;
     }
     #stack-text {
       padding: 0 16px 6px;
@@ -1226,8 +1298,9 @@
       background: #fff;
     }
     .stack-item .cover-btn.is-cover {
-      border-color: var(--accent);
-      background: var(--accent);
+      border-color: var(--star);
+      background: var(--star);
+      color: #3d2e00;
     }
 
     /* ----- お知らせ ----- */
@@ -1256,8 +1329,7 @@
   <!-- ホーム -->
   <section id="page-home" class="page active">
     <div class="filter">
-      <select id="f-year" aria-label="年"></select>年
-      <select id="f-month" aria-label="月"></select>月
+      <button id="f-ym" class="ym-btn" aria-label="表示する年月を選ぶ"></button>
     </div>
     <div id="list"></div>
   </section>
@@ -1288,11 +1360,10 @@
       <label><input type="checkbox" data-album-type="lunch" checked>昼食</label>
       <label><input type="checkbox" data-album-type="dinner" checked>夕食</label>
       <label><input type="checkbox" id="al-fav"><span class="heart on al-heart"></span>お気に入りのみ</label>
-      <label><input type="checkbox" id="al-main">★メイン写真のみ</label>
+      <label><input type="checkbox" id="al-main"><span class="star-mark">★</span>メイン写真のみ</label>
     </div>
     <div class="filter">
-      <select id="al-year" aria-label="年"></select>年
-      <select id="al-month" aria-label="月"></select>月
+      <button id="al-ym" class="ym-btn" aria-label="表示する年月を選ぶ"></button>
     </div>
     <p id="al-count" class="summary"></p>
     <div id="album-grid" class="album-grid"></div>
@@ -1343,8 +1414,8 @@
   <!-- 写真を追加（ボトムナビの＋から） -->
   <div id="adder" class="overlay">
     <div class="ed-top">
+      <button id="adder-close" class="back-btn" aria-label="戻る">←</button>
       <h2>写真を追加</h2>
-      <button id="adder-close" aria-label="閉じる">×</button>
     </div>
     <div class="add-btns">
       <button id="adder-camera" class="camera-btn">📷 カメラ起動</button>
@@ -1367,8 +1438,8 @@
   <!-- 写真を縦に並べて表示（2〜3枚のマスから） -->
   <div id="stack" class="overlay">
     <div class="stack-top">
+      <button id="stack-close" class="back-btn" aria-label="戻る">←</button>
       <h2 id="stack-title"></h2>
-      <button id="stack-close" aria-label="閉じる">×</button>
     </div>
     <div id="stack-text"></div>
     <div id="stack-list" class="stack-list"></div>
@@ -1378,15 +1449,30 @@
   <div id="cal-land" class="overlay">
     <div class="land-box">
       <div class="land-head">
+        <button id="land-close" class="back-btn" aria-label="戻る">←</button>
         <button id="land-prev" aria-label="前の月">‹</button>
         <h2 id="land-title"></h2>
         <button id="land-next" aria-label="次の月">›</button>
-        <button id="land-close" aria-label="閉じる">×</button>
       </div>
       <div class="cal-week">
         <span class="sun">日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span class="sat">土</span>
       </div>
       <div id="land-grid" class="cal-grid land-grid"></div>
+    </div>
+  </div>
+
+  <!-- 年月の選択（ドラム式。ホームとアルバムの「2026年11月 ▼」から） -->
+  <div id="ym-pick" class="overlay sheet-overlay" style="z-index:16">
+    <div class="sheet">
+      <div class="wheel-wrap">
+        <div id="wheel-year" class="wheel"></div>
+        <div id="wheel-month" class="wheel"></div>
+        <div class="wheel-band"></div>
+      </div>
+      <div class="actions">
+        <button id="ym-cancel" class="btn-sub">キャンセル</button>
+        <button id="ym-ok" class="btn-main">決定</button>
+      </div>
     </div>
   </div>
 
@@ -1433,8 +1519,8 @@
   <!-- 日の編集画面 -->
   <div id="day-editor" class="overlay">
     <div class="ed-top">
+      <button id="ed-close" class="back-btn" aria-label="戻る">←</button>
       <h2 id="ed-title"></h2>
-      <button id="ed-close" aria-label="閉じる">×</button>
     </div>
     <div id="ed-body"></div>
   </div>
@@ -1442,10 +1528,11 @@
   <!-- 写真の拡大表示 -->
   <div id="viewer" class="overlay">
     <div class="viewer-top">
+      <button id="viewer-close" class="back-btn" aria-label="戻る">←</button>
       <span id="viewer-count"></span>
+      <span class="spacer"></span>
       <button id="viewer-cover"></button>
       <button id="viewer-fav" class="fav-btn"></button>
-      <button id="viewer-close" aria-label="閉じる">×</button>
     </div>
     <img id="viewer-img" alt="食事の写真">
     <div id="viewer-text"></div>
@@ -2630,17 +2717,78 @@
     let filterYear = new Date().getFullYear();
     let filterMonth = 0;
 
-    const monthSelect = $('f-month');
-    monthSelect.innerHTML = '<option value="0">－</option>' +
-      Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join('');
-    monthSelect.addEventListener('change', () => {
-      filterMonth = Number(monthSelect.value);
-      showList();
+    let homeYears = [filterYear];
+    $('f-ym').addEventListener('click', () => {
+      openYmPicker({
+        years: homeYears.map((y) => ({ value: y, label: `${y}年` })),
+        allMonthsLabel: '1年分',
+        year: filterYear,
+        month: filterMonth,
+        onDone: (y, m) => {
+          filterYear = Number(y);
+          filterMonth = m;
+          showList();
+        },
+      });
     });
-    $('f-year').addEventListener('change', () => {
-      filterYear = Number($('f-year').value);
-      showList();
+
+    // =====================================================
+    // 年月のドラム式選択（ホームとアルバム共通）
+    // 年・月の2列を上下に回し、真ん中の帯に来たものを「決定」で選ぶ
+    // =====================================================
+    const WHEEL_ROW = 40;
+    let ymDone = null;
+
+    function fillWheel(el, items, value) {
+      el.innerHTML = '';
+      items.forEach((it, i) => {
+        const d = document.createElement('div');
+        d.dataset.v = it.value;
+        d.textContent = it.label;
+        d.addEventListener('click', () => el.scrollTo({ top: i * WHEEL_ROW, behavior: 'smooth' })); // タップでその行へ
+        el.appendChild(d);
+      });
+      const index = Math.max(0, items.findIndex((it) => String(it.value) === String(value)));
+      el.scrollTop = index * WHEEL_ROW;
+      markWheel(el);
+    }
+    function wheelIndex(el) {
+      return Math.min(el.children.length - 1, Math.max(0, Math.round(el.scrollTop / WHEEL_ROW)));
+    }
+    function markWheel(el) {
+      const i = wheelIndex(el);
+      [...el.children].forEach((d, j) => d.classList.toggle('sel', j === i));
+    }
+    $('wheel-year').addEventListener('scroll', () => markWheel($('wheel-year')));
+    $('wheel-month').addEventListener('scroll', () => markWheel($('wheel-month')));
+
+    // years: [{value, label}]（新しい順）、allMonthsLabel: 月を絞らない選択肢の名前
+    function openYmPicker({ years, allMonthsLabel, year, month, onDone }) {
+      ymDone = onDone;
+      openLayer($('ym-pick'), { onClose: () => (ymDone = null) });
+      // 表示されてからでないとスクロール位置を設定できない
+      fillWheel($('wheel-year'), years.slice().reverse(), year); // 上が古い年
+      const months = Array.from({ length: 12 }, (_, i) => ({ value: i + 1, label: `${i + 1}月` }));
+      months.push({ value: 0, label: allMonthsLabel });
+      fillWheel($('wheel-month'), months, month);
+    }
+    $('ym-ok').addEventListener('click', async () => {
+      const done = ymDone;
+      const yEl = $('wheel-year');
+      const mEl = $('wheel-month');
+      const y = yEl.children[wheelIndex(yEl)].dataset.v;
+      const m = Number(mEl.children[wheelIndex(mEl)].dataset.v);
+      await closeLayer();
+      if (done) done(y, m);
     });
+    $('ym-cancel').addEventListener('click', closeLayer);
+
+    // ボタンの文字：「2026年11月 ▼」「2026年 ▼」「すべて ▼」「毎年11月 ▼」
+    function ymLabel(year, month) {
+      const y = Number(year);
+      const text = y ? (month ? `${y}年${month}月` : `${y}年`) : (month ? `毎年${month}月` : 'すべて');
+      return `${text}<small>▼</small>`;
+    }
 
     async function showList() {
       const list = $('list');
@@ -2648,11 +2796,9 @@
       listUrls.renew();
 
       // 年の選択肢：記録がある年と今年
-      const years = [...new Set([new Date().getFullYear(), ...all.map((s) => Number(s.day.slice(0, 4)))])]
+      homeYears = [...new Set([new Date().getFullYear(), ...all.map((s) => Number(s.day.slice(0, 4)))])]
         .sort((a, b) => b - a);
-      $('f-year').innerHTML = years.map((y) => `<option value="${y}">${y}</option>`).join('');
-      $('f-year').value = filterYear;
-      monthSelect.value = filterMonth;
+      $('f-ym').innerHTML = ymLabel(filterYear, filterMonth);
 
       const prefix = filterMonth ? `${filterYear}-${pad(filterMonth)}-` : `${filterYear}-`;
       const slots = all.filter((s) => s.day.startsWith(prefix));
@@ -2802,31 +2948,41 @@
     // アルバム（写真を3列で新しい順に。種類・お気に入り・年月で絞り込み）
     // =====================================================
     const albumUrls = makeUrlCache();
-    const albumYear = $('al-year');
-    const albumMonth = $('al-month');
-    albumMonth.innerHTML = '<option value="0">－</option>' +
-      Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join('');
+    // 年月の絞り込み（'0' / 0 は絞らない。最初は「すべて」）
+    let albumYear = '0';
+    let albumMonth = 0;
+    let albumYears = [];
     document.querySelectorAll('.album-checks input').forEach((el) => el.addEventListener('change', renderAlbum));
     document.querySelector('.al-heart').innerHTML = heartSvg(true);
-    albumYear.addEventListener('change', renderAlbum);
-    albumMonth.addEventListener('change', renderAlbum);
+    $('al-ym').addEventListener('click', () => {
+      openYmPicker({
+        years: [...albumYears.map((y) => ({ value: y, label: `${y}年` })), { value: '0', label: 'すべての年' }],
+        allMonthsLabel: 'すべての月',
+        year: albumYear,
+        month: albumMonth,
+        onDone: (y, m) => {
+          albumYear = String(y);
+          albumMonth = m;
+          renderAlbum();
+        },
+      });
+    });
 
     async function renderAlbum() {
       if (!$('page-album').classList.contains('active')) return;
       const all = await getAllSlots();
 
-      // 年の選択肢：「－」と記録がある年
-      const year = albumYear.value || '0';
-      const years = [...new Set(all.map((s) => s.day.slice(0, 4)))].sort().reverse();
-      albumYear.innerHTML = '<option value="0">－</option>' + years.map((y) => `<option value="${y}">${y}</option>`).join('');
-      albumYear.value = years.includes(year) ? year : '0';
+      // 年の選択肢：記録がある年（＋すべての年）
+      albumYears = [...new Set(all.map((s) => s.day.slice(0, 4)))].sort().reverse();
+      if (!albumYears.includes(albumYear)) albumYear = '0';
+      $('al-ym').innerHTML = ymLabel(albumYear, albumMonth);
 
       const types = new Set([...document.querySelectorAll('[data-album-type]')]
         .filter((el) => el.checked).map((el) => el.dataset.albumType));
       const favOnly = $('al-fav').checked;
       const mainOnly = $('al-main').checked;
-      const y = albumYear.value;
-      const m = Number(albumMonth.value);
+      const y = albumYear;
+      const m = albumMonth;
 
       const items = [];
       for (const s of all) {
