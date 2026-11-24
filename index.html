@@ -109,7 +109,54 @@
       margin-bottom: 8px;
     }
     .day-title {
+      font-size: 1.12em;
       font-weight: bold;
+    }
+    /* 検索ボックス */
+    .search {
+      position: relative;
+      margin-bottom: 6px;
+    }
+    .search input {
+      width: 100%;
+      padding: 9px 36px 9px 12px;
+      border: 1px solid #ddd;
+      border-radius: 20px;
+      background: #fff;
+      font-family: inherit;
+      font-size: 1em;
+    }
+    .search input::-webkit-search-cancel-button {
+      display: none; /* 自前の × を使う */
+    }
+    #q-clear {
+      display: none;
+      position: absolute;
+      right: 6px;
+      top: 50%;
+      width: 28px;
+      height: 28px;
+      margin-top: -14px;
+      border: none;
+      border-radius: 50%;
+      background: #ddd;
+      color: #fff;
+      font-size: 15px;
+      line-height: 28px;
+    }
+    .search.has-q #q-clear {
+      display: block;
+    }
+    .search-note {
+      margin: 0 0 8px;
+      color: var(--sub);
+      font-size: 0.85em;
+    }
+    mark {
+      padding: 0 1px;
+      border-radius: 3px;
+      background: #ffe08a;
+      color: inherit;
     }
     .day-title .today {
       margin-left: 6px;
@@ -918,6 +965,11 @@
       display: flex;
       flex-direction: column;
       aspect-ratio: auto;
+      padding: 0 2px 2px;
+    }
+    /* 写真は四隅とも同じ丸み（マスの角に合わせて下だけ丸くならないように） */
+    #cal-grid .cal-day img {
+      border-radius: 4px;
     }
     #cal-grid .cal-num {
       position: static;
@@ -1249,6 +1301,9 @@
       line-height: 28px;
       background: rgba(0, 0, 0, 0.35);
     }
+    .album-grid.hide-fav .fav-btn {
+      display: none;
+    }
     .album-item .fav-btn.on {
       background: rgba(255, 255, 255, 0.9);
     }
@@ -1534,6 +1589,11 @@
 <body>
   <!-- ホーム -->
   <section id="page-home" class="page active">
+    <!-- 料理名・メモ・ひとことの検索（入力中は年月に関係なく、すべての期間から探す） -->
+    <div class="search">
+      <input type="search" id="q" placeholder="🔍 料理名・ひとことを検索" enterkeyhint="search" autocomplete="off">
+      <button id="q-clear" aria-label="検索をやめる">×</button>
+    </div>
     <div class="filter">
       <button id="f-ym" class="ym-btn" aria-label="表示する年月を選ぶ"></button>
     </div>
@@ -1567,6 +1627,7 @@
       <label><input type="checkbox" data-album-type="dinner" checked>夕食</label>
       <label><input type="checkbox" id="al-fav"><span class="heart on al-heart"></span>お気に入りのみ</label>
       <label><input type="checkbox" id="al-main"><span class="star-mark">★</span>メイン写真のみ</label>
+      <label><input type="checkbox" id="al-showfav" checked><span class="heart al-heart-off"></span>ボタンを表示</label>
     </div>
     <div class="filter">
       <button id="al-ym" class="ym-btn" aria-label="表示する年月を選ぶ"></button>
@@ -1614,7 +1675,7 @@
       <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path fill="currentColor" d="M9 3 7.17 5H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-3.17L15 3H9zm3 15a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-2.2a2.8 2.8 0 1 0 0-5.6 2.8 2.8 0 0 0 0 5.6z"/></svg>
     </button>
     <button data-page="album"><span>🖼</span>アルバム</button>
-    <button data-page="settings"><span>⚙️</span>設定・情報</button>
+    <button data-page="settings"><span>⚙️</span>設定･情報</button>
   </nav>
 
   <!-- 写真を受け取るための部品（画面には出さない） -->
@@ -3116,6 +3177,37 @@
       return `${text}<small>▼</small>`;
     }
 
+    // 検索：文字を打つたびに少し待ってから一覧を絞り込む
+    let searchTimer;
+    $('q').addEventListener('input', () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        window.scrollTo(0, 0);
+        showList();
+      }, 250);
+    });
+    $('q').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') $('q').blur(); // 決定でキーボードを閉じる
+    });
+    $('q-clear').addEventListener('click', () => {
+      $('q').value = '';
+      showList();
+    });
+
+    const escapeHtml = (s) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+    // 検索した言葉に色を付ける
+    function highlight(text, query) {
+      if (!query) return escapeHtml(text);
+      const lower = text.toLowerCase();
+      let out = '';
+      let i = 0;
+      for (let j = lower.indexOf(query); j >= 0; j = lower.indexOf(query, i)) {
+        out += escapeHtml(text.slice(i, j)) + '<mark>' + escapeHtml(text.slice(j, j + query.length)) + '</mark>';
+        i = j + query.length;
+      }
+      return out + escapeHtml(text.slice(i));
+    }
+
     async function showList() {
       const list = $('list');
       const all = await getAllSlots();
@@ -3126,8 +3218,18 @@
         .sort((a, b) => b - a);
       $('f-ym').innerHTML = ymLabel(filterYear, filterMonth);
 
+      // 検索中は、年月に関係なく、料理名・メモ・ひとことに言葉を含む日をすべて出す
+      const query = $('q').value.trim().toLowerCase();
+      $('q').parentElement.classList.toggle('has-q', !!query);
+      $('f-ym').parentElement.style.display = query ? 'none' : '';
       const prefix = filterMonth ? `${filterYear}-${pad(filterMonth)}-` : `${filterYear}-`;
-      const slots = all.filter((s) => s.day.startsWith(prefix));
+      let slots;
+      if (query) {
+        const hitDays = new Set(all.filter((s) => (s.text || '').toLowerCase().includes(query)).map((s) => s.day));
+        slots = all.filter((s) => hitDays.has(s.day));
+      } else {
+        slots = all.filter((s) => s.day.startsWith(prefix));
+      }
 
       const byDay = new Map();
       for (const s of slots) {
@@ -3135,10 +3237,15 @@
         byDay.get(s.day)[s.type] = s;
       }
       const today = dayKey(Date.now());
-      if (today.startsWith(prefix) && !byDay.has(today)) byDay.set(today, {}); // 今日は記録がなくても出す
+      // 今日は記録がなくても出す（検索中は除く）
+      if (!query && today.startsWith(prefix) && !byDay.has(today)) byDay.set(today, {});
 
       list.innerHTML = '';
-      if (byDay.size === 0) {
+      if (query) {
+        list.innerHTML = byDay.size
+          ? `<p class="search-note">「${escapeHtml($('q').value.trim())}」を含む日：${byDay.size}日</p>`
+          : `<p class="empty">「${escapeHtml($('q').value.trim())}」を含む記録はありません</p>`;
+      } else if (byDay.size === 0) {
         list.innerHTML = '<p class="empty">この期間の記録はありません</p>';
       }
 
@@ -3158,7 +3265,8 @@
 
         const memo = daySlots[MEMO]?.text;
         const hitoText = sec.querySelector('.hito-text');
-        hitoText.textContent = memo || '＋ 書く';
+        if (memo) hitoText.innerHTML = highlight(memo, query);
+        else hitoText.textContent = '＋ 書く';
         hitoText.classList.toggle('blank', !memo);
         sec.querySelector('.hito').addEventListener('click', () => editHitoInline(sec.querySelector('.hito'), day, memo || ''));
 
@@ -3173,7 +3281,7 @@
             // 写真がなければ文字を出す（タップで写真を追加の画面へ）
             box.classList.add('text');
             const span = document.createElement('span');
-            span.textContent = slot.text;
+            span.innerHTML = highlight(slot.text, query);
             box.appendChild(span);
             box.addEventListener('click', () => openAdder(day, type));
           } else if (slot) {
@@ -3357,6 +3465,24 @@
     let albumYears = [];
     document.querySelectorAll('.album-checks input').forEach((el) => el.addEventListener('change', renderAlbum));
     document.querySelector('.al-heart').innerHTML = heartSvg(true);
+    document.querySelector('.al-heart-off').innerHTML = heartSvg(false);
+    // 写真の上の♡ボタンを出すかどうか（スマホに記憶。最初は出す）
+    const showFavBox = $('al-showfav');
+    try {
+      showFavBox.checked = localStorage.getItem('meal-log-album-fav-btn') !== 'hide';
+    } catch {
+      // 読めなければ出す
+    }
+    const applyShowFav = () => $('album-grid').classList.toggle('hide-fav', !showFavBox.checked);
+    applyShowFav();
+    showFavBox.addEventListener('change', () => {
+      try {
+        localStorage.setItem('meal-log-album-fav-btn', showFavBox.checked ? 'show' : 'hide');
+      } catch {
+        // 保存できなくても今回は使える
+      }
+      applyShowFav();
+    });
     $('al-ym').addEventListener('click', () => {
       openYmPicker({
         years: [...albumYears.map((y) => ({ value: y, label: `${y}年` })), { value: '0', label: 'すべての年' }],
