@@ -271,6 +271,11 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
+      pointer-events: none; /* 長押しで画像メニューが出ないように */
+    }
+    .cell-box {
+      -webkit-touch-callout: none;
+      user-select: none;
     }
     .cell-box.none {
       border: 1px dashed #ccc;
@@ -1539,7 +1544,9 @@
   <nav class="bottom-nav">
     <button data-page="home" class="active"><span>🏠</span>ホーム</button>
     <button data-page="calendar"><span>📅</span>カレンダー</button>
-    <button id="nav-add" class="nav-add" aria-label="写真を追加">＋</button>
+    <button id="nav-add" class="nav-add" aria-label="カメラで撮る">
+      <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path fill="currentColor" d="M9 3 7.17 5H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-3.17L15 3H9zm3 15a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-2.2a2.8 2.8 0 1 0 0-5.6 2.8 2.8 0 0 0 0 5.6z"/></svg>
+    </button>
     <button data-page="album"><span>🖼</span>アルバム</button>
     <button data-page="settings"><span>⚙️</span>設定・情報</button>
   </nav>
@@ -1646,21 +1653,6 @@
       <div class="actions">
         <button id="cal-pick-auto" class="btn-sub">自動で選ぶ</button>
         <button id="cal-pick-close" class="btn-sub">閉じる</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- 「なし」や「＋追加」から開く、追加方法の選択 -->
-  <div id="chooser" class="overlay sheet-overlay" style="z-index:14">
-    <div class="sheet">
-      <h2 id="chooser-title"></h2>
-      <div class="choose-list">
-        <button class="camera-btn" data-choose="camera">📷 カメラ起動</button>
-        <button class="camera-btn gallery" data-choose="gallery">🖼 ギャラリーから</button>
-        <button class="btn-sub" data-choose="text" style="padding:14px;border-radius:12px;font-weight:bold">✏️ 文字だけ記録</button>
-      </div>
-      <div class="actions">
-        <button id="chooser-cancel" class="btn-sub">キャンセル</button>
       </div>
     </div>
   </div>
@@ -2193,50 +2185,19 @@
       return { id: newId(), blob, width, height, source: sourceType, originalSize, takenAt, addedAt: Date.now() };
     }
 
-    // 追加先（「なし」や「＋追加」から来たときだけ決まっている）
-    let addTarget = null;
-
-    // 撮った・選んだ写真の行き先：「なし」等から来たらその枠へ直接、そうでなければ「写真を追加」画面へ
+    // 撮った・選んだ写真は「写真を追加」画面へ（ボトムメニューのカメラから来たときは、ここで開く）
+    // 3枚を超えても仮置きし、×で減らすまで保存できない
     async function receivePhotos(photos) {
-      if (addTarget) {
-        const { day, type } = addTarget;
-        addTarget = null;
-        const n = await addPhotosToSlot(day, type, photos);
-        const where = `${formatDay(day)}の${TYPES[type].label}`;
-        // 全部追加できたときは画面で分かるので、お知らせは入りきらなかったときだけ
-        if (n === 0) toast(`${where}は${MAX_PHOTOS}枚まで登録済みです`, 4000);
-        else if (n < photos.length) toast(`${MAX_PHOTOS}枚までなので、${n}枚だけ追加しました`, 4000);
-        refreshAll();
-      } else if (adder) {
-        addToAdder(photos);
-      }
-    }
-
-    // 追加先にあと何枚入るか（入らない写真の切り抜きを聞かないため）
-    async function incomingRoom() {
-      if (addTarget) {
-        const slot = await getSlot(slotKey(addTarget.day, addTarget.type));
-        return MAX_PHOTOS - (slot?.photos.length || 0);
-      }
-      return adder ? MAX_PHOTOS - adderShown().length : MAX_PHOTOS;
+      if (!adder) openAdder();
+      addToAdder(photos);
     }
 
     async function handleFiles(files, sourceType) {
       if (files.length === 0) return;
       try {
-        if (sourceType === 'gallery') {
-          // ギャラリーの写真は1枚ずつ「4:3で切り抜く／元のまま」を選ぶ
-          const room = await incomingRoom();
-          if (room <= 0) {
-            toast(`${MAX_PHOTOS}枚まで登録済みです`, 4000);
-            addTarget = null;
-            return;
-          }
-          if (files.length > room) {
-            toast(`${MAX_PHOTOS}枚までなので、${room}枚だけ追加します`, 4000);
-            files = files.slice(0, room);
-          }
-        }
+        // ギャラリーの写真は1枚ずつ「4:3で切り抜く／元のまま」を選ぶので、一度に3枚まで
+        const limited = sourceType === 'gallery' && files.length > MAX_PHOTOS;
+        if (limited) files = files.slice(0, MAX_PHOTOS);
         const photos = [];
         for (let i = 0; i < files.length; i++) {
           const f = files[i];
@@ -2253,12 +2214,9 @@
             photos.push(await makePhoto(f, sourceType, f.size, Date.now()));
           }
         }
-        toast('', 1);
-        if (photos.length === 0) {
-          addTarget = null;
-          return;
-        }
-        await receivePhotos(photos);
+        if (limited) toast(`一度に選べるのは${MAX_PHOTOS}枚までなので、最初の${MAX_PHOTOS}枚にしました`, 4000);
+        else toast('', 1);
+        if (photos.length > 0) await receivePhotos(photos);
       } catch (e) {
         toast('写真を読み込めませんでした：' + e.message, 5000);
       }
@@ -2474,35 +2432,6 @@
       else openQuietCam();
     }
 
-    // 追加方法の選択（「なし」のマスや、編集画面の「＋追加」から）
-    function openChooser(day, type) {
-      addTarget = { day, type };
-      $('chooser-title').textContent = `${formatDay(day)}の${TYPES[type].label}に追加`;
-      openLayer($('chooser'));
-    }
-    document.querySelectorAll('[data-choose]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        const how = btn.dataset.choose;
-        if (how === 'text') {
-          const { day, type } = addTarget;
-          addTarget = null;
-          await closeLayer();
-          openTextEditor(day, type);
-        } else if (how === 'camera' && cameraSetting === 'quiet') {
-          await closeLayer();
-          openQuietCam();
-        } else {
-          // ファイル選択はタップの直後に呼ぶ必要があるので先に開く
-          if (how === 'camera') cameraInput.click();
-          else galleryInput.click();
-          closeLayer();
-        }
-      });
-    });
-    $('chooser-cancel').addEventListener('click', () => {
-      addTarget = null;
-      closeLayer();
-    });
 
     // =====================================================
     // 文字の入力（文字だけの記録・ひとこと）
@@ -2613,12 +2542,13 @@
     let adder = null; // { day, type, existing, removed:Set(id), added:[写真], textEdited, picked, done }
     const adderUrls = makeUrlCache();
 
-    function openAdder() {
+    // day・type を渡すとその日・種類で開く（「なし」のマス、長押し、編集画面の＋追加から）。
+    // 渡さなければ今日・時刻で決まる種類（ボトムメニューのカメラから）
+    function openAdder(day, type) {
       const now = Date.now();
-      addTarget = null;
       adder = {
-        day: dayKey(now), type: typeByTime(now), existing: [], removed: new Set(), added: [],
-        textEdited: false, picked: false, done: false,
+        day: day || dayKey(now), type: type || typeByTime(now), existing: [], removed: new Set(), added: [],
+        textEdited: false, picked: !!day, done: false,
       };
       $('adder-text').value = '';
       openLayer($('adder'), {
@@ -2679,8 +2609,6 @@
       }
 
       const over = shown.length > MAX_PHOTOS;
-      $('adder-camera').disabled = shown.length >= MAX_PHOTOS;
-      $('adder-gallery').disabled = shown.length >= MAX_PHOTOS;
       $('adder-save').disabled = over;
       const note = $('adder-note');
       note.classList.toggle('warn', over);
@@ -2707,10 +2635,9 @@
       }
     }
 
-    // 撮った・選んだ写真を空き枠に入れる
+    // 撮った・選んだ写真を並べる（3枚を超えた分も仮置き。×で減らすまで保存できない）
     function addToAdder(photos) {
-      const fit = photos.slice(0, Math.max(0, MAX_PHOTOS - adderShown().length));
-      if (fit.length < photos.length) toast(`${MAX_PHOTOS}枚までなので、${fit.length}枚だけ追加しました`, 4000);
+      const fit = photos;
       if (fit.length === 0) return;
       // ギャラリーの写真で、日付・種類をまだ触っていなければ、撮影日時に合わせる
       const auto = !adder.picked && adder.added.length === 0 && fit[0].source === 'gallery';
@@ -2795,9 +2722,9 @@
         sec.dataset.count = count;
         sec.innerHTML = `
           <div class="ed-head">${TYPES[type].icon} ${TYPES[type].label}
-            ${count < MAX_PHOTOS ? '<button class="ed-add">＋追加</button>' : ''}
+            <button class="ed-add">＋追加</button>
           </div>`;
-        sec.querySelector('.ed-add')?.addEventListener('click', () => openChooser(day, type));
+        sec.querySelector('.ed-add').addEventListener('click', () => openAdder(day, type));
 
         if (!slot?.photos.length) {
           sec.insertAdjacentHTML('beforeend', '<div class="ed-none">写真なし</div>');
@@ -3233,7 +3160,7 @@
             const span = document.createElement('span');
             span.textContent = slot.text;
             box.appendChild(span);
-            box.addEventListener('click', () => openChooser(day, type));
+            box.addEventListener('click', () => openAdder(day, type));
           } else if (slot) {
             const coverIndex = Math.max(0, slot.photos.findIndex((p) => p.id === slot.cover));
             const img = document.createElement('img');
@@ -3246,8 +3173,8 @@
               box.insertAdjacentHTML('beforeend', '<span class="dots">' +
                 slot.photos.map((_, i) => `<i${i === coverIndex ? ' class="on"' : ''}></i>`).join('') + '</span>');
             }
-            // 1枚ならすぐ拡大、2〜3枚なら縦に並べて表示
-            box.addEventListener('click', () => {
+            // タップ：1枚ならすぐ拡大、2〜3枚なら縦に並べて表示。長押し：写真を追加の画面
+            bindLongPress(box, () => openAdder(day, type), () => {
               if (slot.photos.length === 1) openViewer(slot.photos, 0, slot.key);
               else openStack(slot.key);
             });
@@ -3255,12 +3182,47 @@
             box.classList.add('none');
             box.innerHTML = 'なし<br>＋';
             box.setAttribute('aria-label', `${formatDay(day)}の${TYPES[type].label}を追加`);
-            box.addEventListener('click', () => openChooser(day, type));
+            box.addEventListener('click', () => openAdder(day, type));
           }
           cell.appendChild(box);
           grid.appendChild(cell);
         }
         list.appendChild(sec);
+      });
+    }
+
+    // 長押し（0.5秒）とタップを分けて受け取る。指を動かしたら（スクロール）どちらにもしない
+    function bindLongPress(el, onLong, onTap) {
+      let timer = null;
+      let start = null;
+      let fired = false;
+      const cancel = () => {
+        clearTimeout(timer);
+        timer = null;
+      };
+      el.addEventListener('pointerdown', (e) => {
+        fired = false;
+        start = [e.clientX, e.clientY];
+        timer = setTimeout(() => {
+          timer = null;
+          fired = true;
+          if (navigator.vibrate) navigator.vibrate(15);
+          onLong();
+        }, 500);
+      });
+      el.addEventListener('pointermove', (e) => {
+        if (timer && Math.hypot(e.clientX - start[0], e.clientY - start[1]) > 10) cancel();
+      });
+      el.addEventListener('pointerup', cancel);
+      el.addEventListener('pointerleave', cancel);
+      el.addEventListener('pointercancel', cancel);
+      el.addEventListener('contextmenu', (e) => e.preventDefault()); // 画像の長押しメニューを出さない
+      el.addEventListener('click', () => {
+        if (fired) {
+          fired = false; // 長押しの後の click は無視
+          return;
+        }
+        onTap();
       });
     }
 
@@ -3675,7 +3637,8 @@
         if (btn.dataset.page === 'settings') renderInfo();
       });
     });
-    $('nav-add').addEventListener('click', openAdder);
+    // ボトムメニューのカメラ：すぐ撮影。撮れたら「写真を追加」画面になる（撮らずに戻ったら何もしない）
+    $('nav-add').addEventListener('click', startCamera);
 
     // 食事の時間帯（終了は開始より後になるように直す）
     document.querySelectorAll('.set-time').forEach((row) => {
