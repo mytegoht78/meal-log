@@ -10,19 +10,28 @@
   <link rel="apple-touch-icon" href="icon-192.png">
   <!-- ホーム画面に追加すると、アドレスバーのないアプリ画面で開く -->
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#fffaf3">
+  <meta name="theme-color" content="#faf5ec">
+  <!-- 文字（丸ゴシック） -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
   <!-- ZIP ファイルを作る・読むためのライブラリ -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <style>
+    /* 色（あたたかい日記風）：メイン1色＋生成りの背景・カード＋こげ茶の文字 */
     :root {
-      --accent: #ff8a3d;
+      --accent: #e8833a; /* 落ち着いたテラコッタ寄りのオレンジ */
       --star: #f2b000; /* メイン写真の★ */
       --green: #4a8f6a;
       --blue: #4a76a8;
-      --bg: #fffaf3;
-      --text: #333;
-      --sub: #888;
-      --line: #e8e0d4;
+      --bg: #faf5ec; /* 背景（クリーム） */
+      --card: #fffdf8; /* カード（生成り） */
+      --card-line: #efe5d6; /* カードの枠 */
+      --tile: #f4ece0; /* 空のマス */
+      --text: #4a3f35; /* 文字（こげ茶） */
+      --ink2: #6b5b4b; /* やや薄い文字 */
+      --sub: #a89886; /* 補足の文字・アイコン */
+      --line: #eadfcf; /* 区切り線 */
     }
     /* 画面を下に引っ張ったときのページ更新（プル・トゥ・リフレッシュ）を止める */
     html,
@@ -36,7 +45,8 @@
       -webkit-tap-highlight-color: transparent;
     }
     body {
-      font-family: sans-serif;
+      /* 丸ゴシックで手帳のようなやわらかさに（読み込めないときは端末の丸ゴシック・ゴシック） */
+      font-family: 'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', 'Hiragino Sans', sans-serif;
       margin: 0;
       padding: 16px;
       background: var(--bg);
@@ -1584,6 +1594,214 @@
     #toast.show {
       opacity: 1;
     }
+
+    /* =====================================================
+       あたたかい日記風のデザイン（ホームとボトムメニュー）
+       ここより上の古い指定を上書きする。ほかの画面も順にこちらへ揃えていく
+       ===================================================== */
+    /* 線のアイコン（svgIcon() で作る。色は周りの文字色） */
+    .ico {
+      display: inline-block;
+      flex: none;
+      width: 1em;
+      height: 1em;
+      vertical-align: -0.15em;
+    }
+
+    /* 検索ボックス（左に虫めがね） */
+    .search .ico {
+      position: absolute;
+      left: 13px;
+      top: 50%;
+      color: var(--sub);
+      font-size: 17px;
+      transform: translateY(-50%);
+      pointer-events: none;
+    }
+    .search input {
+      padding-left: 38px;
+      border: 1px solid var(--line);
+      background: var(--card);
+      color: var(--text);
+    }
+    .search input::placeholder {
+      color: var(--sub);
+    }
+    #q-clear {
+      background: var(--line);
+    }
+
+    /* 「2026年11月 ⌄」 */
+    .ym-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      color: var(--text);
+      font-size: 1.3em;
+    }
+    .ym-btn .ico {
+      color: var(--sub);
+      font-size: 0.75em;
+    }
+
+    /* 1日ぶんのカード */
+    .day {
+      padding: 12px;
+      border: 1px solid var(--card-line);
+      border-radius: 16px;
+      background: var(--card);
+      box-shadow: none;
+    }
+    .day-head {
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    /* 日記帳のような日付：大きな日にち＋曜日と年月 */
+    .dnum {
+      font-size: 32px;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .dmeta {
+      line-height: 1.3;
+    }
+    .dmeta b {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .dmeta small {
+      color: var(--sub);
+      font-size: 11px;
+    }
+    .today-pill {
+      padding: 2px 9px;
+      border-radius: 10px;
+      background: #f7e3d1;
+      color: #b8611f;
+      font-size: 11px;
+    }
+    .day-edit {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      margin-left: auto;
+      padding: 0;
+      border-radius: 50%;
+      background: #f6efe4;
+      color: #8a7b6b;
+      font-size: 17px;
+    }
+
+    /* マス：ラベルは写真の上の小さな札。空のマスは薄いベージュに＋だけ */
+    .cell-box {
+      border-radius: 12px;
+      background: var(--tile);
+    }
+    .cell-box.none {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      background: var(--tile);
+      color: #cbbba6;
+      font-size: 22px;
+    }
+    .tile-label {
+      position: absolute;
+      left: 6px;
+      bottom: 6px;
+      z-index: 1;
+      padding: 1px 8px;
+      border-radius: 10px;
+      background: rgba(255, 253, 248, 0.88);
+      color: var(--ink2);
+      font-size: 11px;
+      line-height: 1.6;
+      pointer-events: none;
+    }
+    .cell-box.none .tile-label,
+    .cell-box.text .tile-label {
+      top: 6px;
+      bottom: auto;
+      left: 9px;
+      padding: 0;
+      background: none;
+      color: var(--sub);
+    }
+    .cell-box.text {
+      padding: 24px 10px 8px;
+      border: none;
+      background: #fbf0e2;
+    }
+    .cell-box.text .tile-label {
+      display: block; /* 文字のマスの「span は行数で切る」指定を受けないように */
+    }
+    /* 複数枚の印は右下に小さく */
+    .dots {
+      left: auto;
+      right: 7px;
+      bottom: 8px;
+      gap: 4px;
+      padding: 0;
+      background: none;
+      transform: none;
+    }
+    .dots i {
+      width: 6px;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.55);
+      box-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+    }
+    .dots i.on {
+      background: #fff;
+    }
+
+    /* ひとこと：ノートの一行のように */
+    .hito {
+      gap: 8px;
+      margin-top: 10px;
+      padding: 10px 2px 0;
+      border-top: 1px dashed #e6daca;
+      font-size: 14px;
+    }
+    .hito > .ico {
+      color: var(--accent);
+      font-size: 16px;
+    }
+    .hito-text.blank {
+      color: var(--sub);
+    }
+
+    /* ボトムメニュー */
+    .bottom-nav {
+      border-top-color: var(--card-line);
+      background: var(--card);
+    }
+    .bottom-nav button {
+      color: var(--sub);
+      font-size: 11px;
+    }
+    .bottom-nav button .ico {
+      font-size: 23px;
+    }
+    .bottom-nav button.active {
+      color: var(--accent);
+    }
+    .bottom-nav .nav-add {
+      width: 60px;
+      height: 60px;
+      margin-top: -24px;
+      border: 4px solid var(--bg);
+      background: var(--accent);
+      box-shadow: none;
+    }
+    .bottom-nav .nav-add .ico {
+      color: #fff;
+      font-size: 26px;
+    }
   </style>
 </head>
 <body>
@@ -1591,7 +1809,8 @@
   <section id="page-home" class="page active">
     <!-- 料理名・メモ・ひとことの検索（入力中は年月に関係なく、すべての期間から探す） -->
     <div class="search">
-      <input type="search" id="q" placeholder="🔍 料理名・ひとことを検索" enterkeyhint="search" autocomplete="off">
+      <i data-icon="search"></i>
+      <input type="search" id="q" placeholder="料理名・ひとことを検索" enterkeyhint="search" autocomplete="off">
       <button id="q-clear" aria-label="検索をやめる">×</button>
     </div>
     <div class="filter">
@@ -1669,13 +1888,12 @@
   </section>
 
   <nav class="bottom-nav">
-    <button data-page="home" class="active"><span>🏠</span>ホーム</button>
-    <button data-page="calendar"><span>📅</span>カレンダー</button>
-    <button id="nav-add" class="nav-add" aria-label="カメラで撮る">
-      <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path fill="currentColor" d="M9 3 7.17 5H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-3.17L15 3H9zm3 15a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-2.2a2.8 2.8 0 1 0 0-5.6 2.8 2.8 0 0 0 0 5.6z"/></svg>
-    </button>
-    <button data-page="album"><span>🖼</span>アルバム</button>
-    <button data-page="settings"><span>⚙️</span>設定･情報</button>
+    <!-- data-icon の中身は起動時に線のアイコン（svgIcon）に置き換える -->
+    <button data-page="home" class="active"><i data-icon="home"></i>ホーム</button>
+    <button data-page="calendar"><i data-icon="calendar"></i>カレンダー</button>
+    <button id="nav-add" class="nav-add" aria-label="カメラで撮る"><i data-icon="camera"></i></button>
+    <button data-page="album"><i data-icon="photo"></i>アルバム</button>
+    <button data-page="settings"><i data-icon="settings"></i>設定･情報</button>
   </nav>
 
   <!-- 写真を受け取るための部品（画面には出さない） -->
@@ -1833,6 +2051,25 @@
     // 共通の部品
     // =====================================================
     const $ = (id) => document.getElementById(id);
+
+    // 線のアイコン（24×24、線の太さをそろえる。色は周りの文字色）
+    const ICON_PATHS = {
+      home: '<path d="M4 11l8-7 8 7"/><path d="M6 9.5V20h12V9.5"/><path d="M10 20v-5h4v5"/>',
+      calendar: '<rect x="4" y="5" width="16" height="15" rx="2.5"/><path d="M8 3v4M16 3v4M4 10h16"/>',
+      camera: '<path d="M4 8.5A1.5 1.5 0 0 1 5.5 7H8l1.7-2.3h4.6L16 7h2.5A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z"/><circle cx="12" cy="13" r="3.5"/>',
+      photo: '<rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="9" cy="9.5" r="1.6"/><path d="M4 17l5-5 4 4 3-3 4 4"/>',
+      settings: '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
+      search: '<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/>',
+      chevron: '<path d="M6 9l6 6 6-6"/>',
+      pencil: '<path d="M5 19l1-4L16 5l3 3L9 18z"/><path d="M14 7l3 3"/>',
+      plus: '<path d="M12 6v12M6 12h12"/>',
+      feather: '<path d="M19 5c-6 0-11 4-11 11v3"/><path d="M8 15c5 0 9-3 11-10"/><path d="M8 11h5"/>',
+    };
+    function svgIcon(name) {
+      return `<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" ` +
+        `stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON_PATHS[name]}</svg>`;
+    }
+    document.querySelectorAll('[data-icon]').forEach((el) => (el.outerHTML = svgIcon(el.dataset.icon)));
     const pad = (n) => String(n).padStart(2, '0');
 
     const TYPES = {
@@ -3174,7 +3411,7 @@
     function ymLabel(year, month) {
       const y = Number(year);
       const text = y ? (month ? `${y}年${month}月` : `${y}年`) : (month ? `毎年${month}月` : 'すべての期間');
-      return `${text}<small>▼</small>`;
+      return `${text}${svgIcon('chevron')}`;
     }
 
     // 検索：文字を打つたびに少し待ってから一覧を絞り込む
@@ -3253,27 +3490,30 @@
         const daySlots = byDay.get(day);
         const sec = document.createElement('section');
         sec.className = 'day';
+        // 日記帳のような日付：大きな日にち＋曜日と年月
+        const dd = parseDay(day);
         sec.innerHTML = `
           <div class="day-head">
-            <span class="day-title">${formatDay(day)}${day === today ? '<span class="today">今日</span>' : ''}</span>
-            <button class="day-edit">✎ 編集</button>
+            <div class="dnum">${dd.getDate()}</div>
+            <div class="dmeta"><b>${'日月火水木金土'[dd.getDay()]}曜日</b><small>${dd.getFullYear()}.${dd.getMonth() + 1}</small></div>
+            ${day === today ? '<span class="today-pill">今日</span>' : ''}
+            <button class="day-edit" aria-label="${formatDay(day)}を編集">${svgIcon('pencil')}</button>
           </div>
           <div class="day-grid"></div>
-          <div class="hito" role="button" tabindex="0"><span class="hito-label">ひとこと</span><span class="hito-text"></span></div>`;
+          <div class="hito" role="button" tabindex="0" aria-label="ひとこと">${svgIcon('feather')}<span class="hito-text"></span></div>`;
         sec.querySelector('.day-edit').addEventListener('click', () => openDayEditor(day));
         const grid = sec.querySelector('.day-grid');
 
         const memo = daySlots[MEMO]?.text;
         const hitoText = sec.querySelector('.hito-text');
         if (memo) hitoText.innerHTML = highlight(memo, query);
-        else hitoText.textContent = '＋ 書く';
+        else hitoText.textContent = 'ひとことを書く';
         hitoText.classList.toggle('blank', !memo);
         sec.querySelector('.hito').addEventListener('click', () => editHitoInline(sec.querySelector('.hito'), day, memo || ''));
 
         for (const type of TYPE_ORDER) {
           const slot = daySlots[type];
           const cell = document.createElement('div');
-          cell.innerHTML = `<div class="cell-label">${TYPES[type].label}</div>`;
           // 写真のマスは中で横にスクロールさせるので button ではなく div にする
           const box = document.createElement(slot?.photos.length ? 'div' : 'button');
           box.className = 'cell-box';
@@ -3317,10 +3557,12 @@
             });
           } else {
             box.classList.add('none');
-            box.innerHTML = 'なし<br>＋';
+            box.innerHTML = svgIcon('plus');
             box.setAttribute('aria-label', `${formatDay(day)}の${TYPES[type].label}を追加`);
             box.addEventListener('click', () => openAdder(day, type));
           }
+          // 種類のラベルはマスの中に小さな札で
+          box.insertAdjacentHTML('beforeend', `<span class="tile-label">${TYPES[type].label}</span>`);
           cell.appendChild(box);
           grid.appendChild(cell);
         }
