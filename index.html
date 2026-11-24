@@ -3171,7 +3171,16 @@
                 }
               }));
           };
-          req.onsuccess = () => resolve(req.result);
+          req.onsuccess = () => {
+            const db = req.result;
+            // 別の画面（新しい版のアプリなど）がこの保管場所を作り直したいときは、こちらは手放す。
+            // 裏に残った古い画面が保管場所を使い続けて、新しい画面が止まるのを防ぐ
+            db.onversionchange = () => {
+              db.close();
+              dbPromise = null;
+            };
+            resolve(db);
+          };
           req.onerror = () => reject(req.error);
         });
       }
@@ -5413,12 +5422,11 @@
     const SAMPLE_TIME = { breakfast: 7.5, lunch: 12.5, dinner: 19, diary: 15 }; // 撮った時刻（時）
 
     async function prepareSample() {
-      // 前回のサンプルを消して作り直す
-      await new Promise((resolve) => {
-        const req = indexedDB.deleteDatabase(DB_NAME);
-        req.onsuccess = req.onerror = req.onblocked = () => resolve();
-      });
+      // 前回のサンプルは、保管場所ごと消さずに「中身だけ」入れ替える。
+      // （前回のサンプル画面が裏に残っていると、保管場所を消す処理が終わらず止まってしまうため）
       toast('読み込み中…', 0);
+      const slots = [];
+      const putSlot = async (slot) => slots.push(slot); // ここでは集めるだけ。最後にまとめて入れ替える
       const jobs = [];
       for (const d of SAMPLE_DAYS) {
         const date = new Date();
@@ -5456,6 +5464,7 @@
         }
       }
       await Promise.all(jobs);
+      await replaceAllSlots(slots);
       toast('', 1);
     }
 
