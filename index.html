@@ -2301,20 +2301,50 @@
       color: var(--text);
       font-weight: bold;
     }
-    /* 見本：テーマの背景色の四角に、メイン色の丸 */
-    .theme-sample {
-      position: relative;
+    /* 見本：小さなホーム画面の絵 */
+    .mini {
+      display: flex;
+      flex-direction: column;
       width: 44px;
-      height: 30px;
-      border: 1px solid rgba(0, 0, 0, 0.08);
+      height: 62px;
+      padding: 5px 4px 0;
+      border: 1px solid rgba(0, 0, 0, 0.12);
       border-radius: 6px;
+      overflow: hidden;
     }
-    .theme-sample i {
-      position: absolute;
-      right: 5px;
-      bottom: 5px;
-      width: 14px;
-      height: 14px;
+    .mini-card {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 3px;
+      border: 1px solid;
+      border-radius: 3px;
+    }
+    .mini-card u {
+      width: 10px;
+      height: 3px;
+      border-radius: 1px;
+    }
+    .mini-tiles {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2px;
+    }
+    .mini-tiles i {
+      height: 7px;
+      border-radius: 1px;
+    }
+    .mini-nav {
+      display: flex;
+      justify-content: center;
+      height: 10px;
+      margin: auto -4px 0;
+      border-top: 1px solid;
+    }
+    .mini-nav b {
+      width: 10px;
+      height: 10px;
+      margin-top: -5px;
       border-radius: 50%;
     }
   </style>
@@ -4636,12 +4666,13 @@
 
     // カラーテーマ（スマホに記憶。色の値は style の :root[data-theme=...]）
     const THEMES = [
-      { id: 'warm', name: 'オレンジ', bg: '#faf5ec', accent: '#e8833a' },
-      { id: 'matcha', name: '抹茶', bg: '#f5f4ec', accent: '#5f7f3f' },
-      { id: 'ai', name: '藍', bg: '#f6f6f3', accent: '#2f4f86' },
-      { id: 'sakura', name: 'さくら', bg: '#fbf4f3', accent: '#b04a5e' },
-      { id: 'sora', name: '水色', bg: '#f2f7f9', accent: '#3a95bf' },
-      { id: 'gray', name: 'グレー', bg: '#f4f4f3', accent: '#555a60' },
+      // 見本の絵に使う色（背景・カード・枠・空のマス・メイン色）
+      { id: 'warm', name: 'オレンジ', bg: '#faf5ec', card: '#fffdf8', line: '#efe5d6', tile: '#f4ece0', accent: '#e8833a' },
+      { id: 'matcha', name: '抹茶', bg: '#f5f4ec', card: '#fdfdf8', line: '#e3e4d4', tile: '#ebebdf', accent: '#5f7f3f' },
+      { id: 'ai', name: '藍', bg: '#f6f6f3', card: '#fefefc', line: '#e2e4e8', tile: '#eceef1', accent: '#2f4f86' },
+      { id: 'sakura', name: 'さくら', bg: '#fbf4f3', card: '#fffcfb', line: '#f0e1df', tile: '#f6e9e7', accent: '#b04a5e' },
+      { id: 'sora', name: '水色', bg: '#f2f7f9', card: '#fcfeff', line: '#dde9ee', tile: '#e6eff3', accent: '#3a95bf' },
+      { id: 'gray', name: 'グレー', bg: '#f4f4f3', card: '#fdfdfc', line: '#e4e4e2', tile: '#ececea', accent: '#555a60' },
     ];
     function currentTheme() {
       return document.documentElement.dataset.theme || 'warm';
@@ -4658,7 +4689,15 @@
       for (const t of THEMES) {
         const b = document.createElement('button');
         b.className = 'theme-btn' + (t.id === currentTheme() ? ' on' : '');
-        b.innerHTML = `<span class="theme-sample" style="background:${t.bg}"><i style="background:${t.accent}"></i></span>${t.name}`;
+        // 小さなホーム画面の絵：背景の上に日のカード（「今日」の札と4マス）、下にボトムメニューとカメラボタン
+        b.innerHTML = `
+          <span class="mini" style="background:${t.bg}">
+            <span class="mini-card" style="background:${t.card};border-color:${t.line}">
+              <u style="background:${t.accent}"></u>
+              <span class="mini-tiles">${`<i style="background:${t.tile}"></i>`.repeat(4)}</span>
+            </span>
+            <span class="mini-nav" style="background:${t.card};border-color:${t.line}"><b style="background:${t.accent}"></b></span>
+          </span>${t.name}`;
         b.addEventListener('click', () => {
           applyTheme(t.id);
           try {
