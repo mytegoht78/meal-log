@@ -38,11 +38,7 @@
       display: none;
     }
 
-    /* ===== ホーム ===== */
-    .buttons {
-      display: flex;
-      gap: 8px;
-    }
+    /* ===== ボタン類 ===== */
     .camera-btn {
       flex: 1;
       padding: 14px 4px;
@@ -66,11 +62,6 @@
     }
     .camera-btn.gallery {
       background: var(--blue);
-    }
-    .backup {
-      display: flex;
-      gap: 8px;
-      margin: 12px 0;
     }
     .backup-btn {
       flex: 1;
@@ -602,6 +593,257 @@
       text-align: center;
     }
 
+    /* ===== ページとボトムナビ ===== */
+    body {
+      padding-bottom: 96px;
+    }
+    .page {
+      display: none;
+    }
+    .page.active {
+      display: block;
+    }
+    .soon {
+      padding: 60px 0;
+      color: var(--sub);
+      text-align: center;
+      line-height: 1.8;
+    }
+    .bottom-nav {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 5;
+      display: flex;
+      align-items: flex-end;
+      padding: 4px 4px calc(6px + env(safe-area-inset-bottom));
+      border-top: 1px solid var(--line);
+      background: #fff;
+    }
+    .bottom-nav button {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1px;
+      padding: 4px 0;
+      border: none;
+      background: none;
+      color: var(--sub);
+      font-size: 0.68em;
+      white-space: nowrap;
+    }
+    .bottom-nav button span {
+      font-size: 1.7em;
+      line-height: 1.2;
+      filter: grayscale(1);
+      opacity: 0.55;
+    }
+    .bottom-nav button.active {
+      color: var(--accent);
+      font-weight: bold;
+    }
+    .bottom-nav button.active span {
+      filter: none;
+      opacity: 1;
+    }
+    .bottom-nav .nav-add {
+      flex: none;
+      justify-content: center;
+      width: 58px;
+      height: 58px;
+      margin: -20px 6px 2px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      font-size: 2.2em;
+      line-height: 1;
+      box-shadow: 0 2px 8px rgba(255, 138, 61, 0.5);
+    }
+
+    /* ----- 設定 ----- */
+    .set-group {
+      background: #fff;
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 12px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    }
+    .set-title {
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+    .set-radio {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 4px;
+      border-top: 1px solid var(--line);
+    }
+    .set-title + .set-radio {
+      border-top: none;
+    }
+    .set-radio input {
+      width: 20px;
+      height: 20px;
+      margin: 0;
+      accent-color: var(--accent);
+    }
+    .set-radio small {
+      display: block;
+      color: var(--sub);
+      font-size: 0.8em;
+    }
+    .set-group .backup-btn {
+      display: block;
+      width: 100%;
+      margin-top: 8px;
+    }
+    .set-note {
+      margin: 8px 0 0;
+      color: var(--sub);
+      font-size: 0.8em;
+      line-height: 1.5;
+    }
+
+    /* ----- 写真を追加 ----- */
+    #adder {
+      z-index: 12;
+      overflow-y: auto;
+      padding: 16px;
+      background: var(--bg);
+    }
+    .add-btns {
+      display: flex;
+      gap: 8px;
+    }
+    .camera-btn:disabled,
+    .btn-main:disabled {
+      opacity: 0.4;
+    }
+    .add-slots {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .add-slot {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      padding: 0;
+      border: none;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #eee;
+    }
+    .add-slot img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .add-slot.empty {
+      border: 2px dashed #ccc;
+      background: #faf7f2;
+      color: #bbb;
+      font-size: 1.6em;
+    }
+    .add-slot .remove {
+      position: absolute;
+      top: 3px;
+      right: 3px;
+      width: 26px;
+      height: 26px;
+      padding: 0;
+      border: none;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.55);
+      color: #fff;
+      font-size: 14px;
+      line-height: 26px;
+    }
+    .add-slot .new {
+      position: absolute;
+      left: 3px;
+      bottom: 3px;
+      padding: 0 5px;
+      border-radius: 4px;
+      background: var(--green);
+      color: #fff;
+      font-size: 0.7em;
+    }
+    .note.warn {
+      color: #d33;
+    }
+
+    /* ----- 写真を縦に並べる表示 ----- */
+    #stack {
+      z-index: 11;
+      background: #111;
+      color: #fff;
+    }
+    .stack-top {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 8px 4px 16px;
+    }
+    .stack-top h2 {
+      margin: 0;
+      font-size: 1em;
+    }
+    #stack-close {
+      margin-left: auto;
+      padding: 0 12px;
+      border: none;
+      background: none;
+      color: #fff;
+      font-size: 1.8em;
+    }
+    #stack-text {
+      padding: 0 16px 6px;
+      color: #ddd;
+      font-size: 0.9em;
+      word-break: break-all;
+    }
+    .stack-list {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 0 8px 12px;
+    }
+    .stack-item {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+    }
+    .stack-item img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      cursor: pointer;
+    }
+    .stack-item .cover-btn {
+      position: absolute;
+      right: 6px;
+      bottom: 6px;
+      padding: 5px 10px;
+      border: 1px solid #aaa;
+      border-radius: 14px;
+      background: rgba(0, 0, 0, 0.6);
+      color: #fff;
+      font-size: 0.8em;
+    }
+    .stack-item .cover-btn.is-cover {
+      border-color: var(--accent);
+      background: var(--accent);
+    }
+
     /* ----- お知らせ ----- */
     #toast {
       position: fixed;
@@ -625,24 +867,55 @@
   </style>
 </head>
 <body>
-  <h1>食事記録アプリ</h1>
+  <!-- ホーム -->
+  <section id="page-home" class="page active">
+    <h1>食事記録アプリ</h1>
+    <div class="filter">
+      <select id="f-year" aria-label="年"></select>年
+      <select id="f-month" aria-label="月"></select>月
+    </div>
+    <div id="list"></div>
+  </section>
 
-  <div class="buttons">
-    <button class="camera-btn" data-add="app">📷 カメラ<small>きれい・音あり</small></button>
-    <button class="camera-btn quiet" data-add="quiet">🔇 静音カメラ<small>音なし</small></button>
-    <button class="camera-btn gallery" data-add="gallery">🖼 ギャラリー<small>撮った写真から</small></button>
-  </div>
+  <!-- 今後作る画面 -->
+  <section id="page-calendar" class="page">
+    <h1>カレンダー</h1>
+    <p class="soon">準備中です</p>
+  </section>
+  <section id="page-collection" class="page">
+    <h1>コレクション</h1>
+    <p class="soon">準備中です</p>
+  </section>
 
-  <div class="backup">
-    <button id="export-btn" class="backup-btn">💾 バックアップ</button>
-    <label for="import-file" class="backup-btn">📂 読み込み</label>
-  </div>
+  <!-- 設定 -->
+  <section id="page-settings" class="page">
+    <h1>設定</h1>
+    <div class="set-group">
+      <div class="set-title">使うカメラ</div>
+      <label class="set-radio">
+        <input type="radio" name="camera" value="quiet">
+        <span>🔇 静音カメラ<small>音なし・横4：縦3</small></span>
+      </label>
+      <label class="set-radio">
+        <input type="radio" name="camera" value="app">
+        <span>📷 きれいなカメラ<small>スマホのカメラアプリ・シャッター音あり</small></span>
+      </label>
+    </div>
+    <div class="set-group">
+      <div class="set-title">バックアップ</div>
+      <button id="export-btn" class="backup-btn">💾 バックアップを保存</button>
+      <label for="import-file" class="backup-btn">📂 バックアップを読み込む</label>
+      <p class="set-note">保存したファイル（.mlbk）は「ダウンロード」に入ります。OneDriveアプリでアップロードしておくと、PCのChromeでこのアプリを開いて読み込めます。</p>
+    </div>
+  </section>
 
-  <div class="filter">
-    <select id="f-year" aria-label="年"></select>年
-    <select id="f-month" aria-label="月"></select>月
-  </div>
-  <div id="list"></div>
+  <nav class="bottom-nav">
+    <button data-page="home" class="active"><span>🏠</span>ホーム</button>
+    <button data-page="calendar"><span>📅</span>カレンダー</button>
+    <button id="nav-add" class="nav-add" aria-label="写真を追加">＋</button>
+    <button data-page="collection"><span>🗂</span>コレクション</button>
+    <button data-page="settings"><span>⚙️</span>設定</button>
+  </nav>
 
   <!-- 写真を受け取るための部品（画面には出さない） -->
   <input type="file" id="camera-input" class="hidden-input" accept="image/*" capture="environment">
@@ -650,23 +923,38 @@
   <!-- .mlbk は Android が知らない拡張子で、accept で絞ると選べなくなるため、絞らずに中身で判定する -->
   <input type="file" id="import-file" class="hidden-input">
 
-  <!-- 撮影後の確認（種類・日付を確かめて保存） -->
-  <div id="confirm" class="overlay sheet-overlay" style="z-index:12">
-    <div class="sheet">
+  <!-- 写真を追加（ボトムナビの＋から） -->
+  <div id="adder" class="overlay">
+    <div class="ed-top">
       <h2>写真を追加</h2>
-      <div id="confirm-photos" class="thumb-row"></div>
-      <div class="label">日付</div>
-      <input type="date" id="confirm-date" class="date-input">
-      <div class="label">種類</div>
-      <div id="confirm-types" class="types"></div>
-      <div id="confirm-note" class="note"></div>
-      <div class="label">文字（料理名・メモなど。なくてもOK）</div>
-      <input type="text" id="confirm-text" class="date-input" maxlength="200" placeholder="例：たまごかけご飯">
-      <div class="actions">
-        <button id="confirm-cancel" class="btn-sub">キャンセル</button>
-        <button id="confirm-save" class="btn-main">保存</button>
-      </div>
+      <button id="adder-close" aria-label="閉じる">×</button>
     </div>
+    <div class="add-btns">
+      <button id="adder-camera" class="camera-btn">📷 カメラ起動</button>
+      <button id="adder-gallery" class="camera-btn gallery">🖼 ギャラリーから</button>
+    </div>
+    <div id="adder-slots" class="add-slots"></div>
+    <div id="adder-note" class="note"></div>
+    <div class="label">日付</div>
+    <input type="date" id="adder-date" class="date-input">
+    <div class="label">種類</div>
+    <div id="adder-types" class="types"></div>
+    <div class="label">文字（料理名・メモなど。なくてもOK）</div>
+    <input type="text" id="adder-text" class="date-input" maxlength="200" placeholder="例：たまごかけご飯">
+    <div class="actions">
+      <button id="adder-cancel" class="btn-sub">キャンセル</button>
+      <button id="adder-save" class="btn-main">保存</button>
+    </div>
+  </div>
+
+  <!-- 写真を縦に並べて表示（2〜3枚のマスから） -->
+  <div id="stack" class="overlay">
+    <div class="stack-top">
+      <h2 id="stack-title"></h2>
+      <button id="stack-close" aria-label="閉じる">×</button>
+    </div>
+    <div id="stack-text"></div>
+    <div id="stack-list" class="stack-list"></div>
   </div>
 
   <!-- 「なし」や「＋追加」から開く、追加方法の選択 -->
@@ -674,9 +962,8 @@
     <div class="sheet">
       <h2 id="chooser-title"></h2>
       <div class="choose-list">
-        <button class="camera-btn" data-choose="app">📷 カメラ</button>
-        <button class="camera-btn quiet" data-choose="quiet">🔇 静音カメラ</button>
-        <button class="camera-btn gallery" data-choose="gallery">🖼 ギャラリー</button>
+        <button class="camera-btn" data-choose="camera">📷 カメラ起動</button>
+        <button class="camera-btn gallery" data-choose="gallery">🖼 ギャラリーから</button>
         <button class="btn-sub" data-choose="text" style="padding:14px;border-radius:12px;font-weight:bold">✏️ 文字だけ記録</button>
       </div>
       <div class="actions">
@@ -756,6 +1043,33 @@
     const SOURCE_ICON = { app: '📷', quiet: '🔇', gallery: '🖼' };
     // 以前の「間食」は「日記」になった
     const normType = (t) => (t === 'snack' ? 'diary' : t);
+    const MAX_PHOTOS = 3; // 日記・食事ごとの写真の上限
+
+    // 使うカメラ（設定画面で選ぶ。スマホに記憶。最初は静音）
+    function getCameraSetting() {
+      try {
+        return localStorage.getItem('meal-log-camera') === 'app' ? 'app' : 'quiet';
+      } catch {
+        return 'quiet';
+      }
+    }
+    function setCameraSetting(value) {
+      try {
+        localStorage.setItem('meal-log-camera', value);
+      } catch {
+        // 保存できなくても、今回は選んだ方で動く
+      }
+      cameraSetting = value;
+    }
+    let cameraSetting = getCameraSetting();
+
+    // 上限を超えた写真を減らす（代表は残し、ほかは古い順に残す。並び順は保つ）
+    function trimSlot(slot) {
+      if (slot.photos.length <= MAX_PHOTOS) return slot;
+      const cover = slot.photos.find((p) => p.id === slot.cover);
+      const others = slot.photos.filter((p) => p !== cover).slice(0, MAX_PHOTOS - (cover ? 1 : 0));
+      return { ...slot, photos: slot.photos.filter((p) => p === cover || others.includes(p)) };
+    }
 
     // 時刻から種類を決める（食事の時間以外は日記）
     function typeByTime(time) {
@@ -852,7 +1166,7 @@
     function getDB() {
       if (!dbPromise) {
         dbPromise = new Promise((resolve, reject) => {
-          const req = indexedDB.open('meal-log', 4);
+          const req = indexedDB.open('meal-log', 5);
           req.onupgradeneeded = () => {
             const db = req.result;
             const tx = req.transaction;
@@ -887,17 +1201,20 @@
                   s.photos.sort((a, b) => a.addedAt - b.addedAt);
                   s.cover = s.photos[0].id; // 一番最初に登録した写真を代表に
                   s.text = '';
-                  slots.put(s);
+                  slots.put(trimSlot(s));
                 });
-                // 第3版の「間食」を「日記」に付け替える
+                // 第3版の「間食」を「日記」に付け替え、4枚目以降の写真を減らす
                 if (hadSlots) {
                   slots.openCursor().onsuccess = (e) => {
                     const cursor = e.target.result;
                     if (!cursor) return;
                     const s = cursor.value;
+                    const fixed = trimSlot(s);
                     if (s.type === 'snack') {
                       cursor.delete();
-                      slots.put({ ...s, type: 'diary', key: slotKey(s.day, 'diary') });
+                      slots.put({ ...fixed, type: 'diary', key: slotKey(s.day, 'diary') });
+                    } else if (fixed !== s) {
+                      cursor.update(fixed);
                     }
                     cursor.continue();
                   };
@@ -942,12 +1259,16 @@
       return putSlot(slot);
     }
 
+    // 上限（3枚）までだけ追加する。追加できた枚数を返す
     async function rawAddPhotos(day, type, photos, preferredCover) {
       const slot = (await getSlot(slotKey(day, type))) || emptySlot(day, type);
       const isNew = slot.photos.length === 0;
-      slot.photos.push(...photos);
-      if (isNew && preferredCover && photos.some((p) => p.id === preferredCover)) slot.cover = preferredCover;
+      const fit = photos.slice(0, Math.max(0, MAX_PHOTOS - slot.photos.length));
+      if (fit.length === 0) return 0;
+      slot.photos.push(...fit);
+      if (isNew && preferredCover && fit.some((p) => p.id === preferredCover)) slot.cover = preferredCover;
       await saveOrDelete(slot);
+      return fit.length;
     }
     async function rawTakePhoto(key, photoId) {
       const slot = await getSlot(key);
@@ -962,9 +1283,24 @@
       serial(() => rawAddPhotos(day, type, photos, preferredCover));
     // 写真を1枚取り外す（代表だったら次の写真が代表に）
     const takePhoto = (key, photoId) => serial(() => rawTakePhoto(key, photoId));
+    // 移動先が3枚で埋まっていたら移動しない（false を返す）
     const movePhoto = (key, photoId, toType) => serial(async () => {
+      const from = await getSlot(key);
+      const to = await getSlot(slotKey(from.day, toType));
+      if ((to?.photos.length || 0) >= MAX_PHOTOS) return false;
       const { photo, slot } = await rawTakePhoto(key, photoId);
       await rawAddPhotos(slot.day, toType, [photo]);
+      return true;
+    });
+    // 「写真を追加」画面の保存：外した写真を除き、新しい写真を足し、文字を変える
+    const commitSlot = (day, type, removedIds, added, text) => serial(async () => {
+      const slot = (await getSlot(slotKey(day, type))) || emptySlot(day, type);
+      slot.photos = slot.photos.filter((p) => !removedIds.has(p.id));
+      const fit = added.slice(0, Math.max(0, MAX_PHOTOS - slot.photos.length));
+      slot.photos.push(...fit);
+      if (text !== null) slot.text = text;
+      await saveOrDelete(slot);
+      return fit.length;
     });
     const setCover = (key, photoId) => serial(async () => {
       const slot = await getSlot(key);
@@ -1088,15 +1424,19 @@
     // 追加先（「なし」や「＋追加」から来たときだけ決まっている）
     let addTarget = null;
 
+    // 撮った・選んだ写真の行き先：「なし」等から来たらその枠へ直接、そうでなければ「写真を追加」画面へ
     async function receivePhotos(photos) {
       if (addTarget) {
         const { day, type } = addTarget;
         addTarget = null;
-        await addPhotosToSlot(day, type, photos);
-        toast(`${formatDay(day)}の${TYPES[type].label}に追加しました`);
+        const n = await addPhotosToSlot(day, type, photos);
+        const where = `${formatDay(day)}の${TYPES[type].label}`;
+        if (n === photos.length) toast(`${where}に追加しました`);
+        else if (n > 0) toast(`${MAX_PHOTOS}枚までなので、${n}枚だけ追加しました`, 4000);
+        else toast(`${where}は${MAX_PHOTOS}枚まで登録済みです`, 4000);
         refreshAll();
-      } else {
-        openConfirm(photos);
+      } else if (adder) {
+        addToAdder(photos);
       }
     }
 
@@ -1127,19 +1467,11 @@
       galleryInput.value = '';
     });
 
-    function startAdd(how) {
-      if (how === 'app') cameraInput.click();
-      else if (how === 'gallery') galleryInput.click();
+    // 設定で選んだカメラを起動（カメラアプリの方はタップの直後に呼ぶ必要がある）
+    function startCamera() {
+      if (cameraSetting === 'app') cameraInput.click();
       else openQuietCam();
     }
-
-    // ホームの3つのボタン：撮ったあとに確認画面で種類を選ぶ
-    document.querySelectorAll('[data-add]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        addTarget = null;
-        startAdd(btn.dataset.add);
-      });
-    });
 
     // 追加方法の選択（「なし」のマスや、編集画面の「＋追加」から）
     function openChooser(day, type) {
@@ -1155,11 +1487,13 @@
           addTarget = null;
           await closeLayer();
           openTextEditor(day, type);
-        } else if (how === 'quiet') {
+        } else if (how === 'camera' && cameraSetting === 'quiet') {
           await closeLayer();
           openQuietCam();
         } else {
-          startAdd(how); // ファイル選択はタップの直後に呼ぶ必要があるので先に開く
+          // ファイル選択はタップの直後に呼ぶ必要があるので先に開く
+          if (how === 'camera') cameraInput.click();
+          else galleryInput.click();
           closeLayer();
         }
       });
@@ -1271,81 +1605,151 @@
     });
 
     // =====================================================
-    // 撮影後の確認（日付・種類を確かめて保存）
+    // 「写真を追加」画面（ボトムナビの＋から）
+    // 写真1〜3には、選んでいる日・種類の保存済みの写真と、新しく撮った写真を並べる。
+    // 保存済みの写真も×で外せる（保存を押したときに確定）
     // =====================================================
-    let pending = null;
-    let confirmDone = false;
-    const confirmUrls = makeUrlCache();
+    let adder = null; // { day, type, existing, removed:Set(id), added:[写真], textEdited, picked, done }
+    const adderUrls = makeUrlCache();
 
-    function openConfirm(photos) {
-      const first = Math.min(...photos.map((p) => p.takenAt));
-      pending = { photos, day: dayKey(first), type: typeByTime(first), textEdited: false };
-      confirmDone = false;
-      $('confirm-text').value = '';
-      renderConfirm();
-      openLayer($('confirm'), {
-        beforeClose: () => confirmDone || confirm('写真を追加せずに閉じますか？'),
+    function openAdder() {
+      const now = Date.now();
+      addTarget = null;
+      adder = {
+        day: dayKey(now), type: typeByTime(now), existing: [], removed: new Set(), added: [],
+        textEdited: false, picked: false, done: false,
+      };
+      $('adder-text').value = '';
+      openLayer($('adder'), {
+        beforeClose: () => adder.done || !isAdderDirty() || confirm('保存せずに閉じますか？'),
         onClose: () => {
-          pending = null;
-          confirmUrls.clear();
+          adder = null;
+          adderUrls.clear();
         },
       });
+      $('adder').scrollTop = 0;
+      renderAdder();
+      loadAdderSlot();
     }
 
-    async function renderConfirm() {
-      const row = $('confirm-photos');
-      row.innerHTML = '';
-      pending.photos.forEach((p, i) => {
-        const img = document.createElement('img');
-        img.src = confirmUrls.get(p.blob);
-        img.alt = `写真${i + 1}`;
-        img.addEventListener('click', () => openViewer(pending.photos, i, null));
-        row.appendChild(img);
-      });
+    const isAdderDirty = () => adder.added.length > 0 || adder.removed.size > 0 || adder.textEdited;
+    const adderShown = () => [...adder.existing.filter((p) => !adder.removed.has(p.id)), ...adder.added];
 
-      $('confirm-date').value = pending.day;
+    // 選んでいる日・種類の保存済みの写真と文字を読み込む
+    async function loadAdderSlot() {
+      const { day, type } = adder;
+      const slot = await getSlot(slotKey(day, type));
+      if (!adder || adder.day !== day || adder.type !== type) return; // 途中で変わった
+      adder.existing = slot?.photos || [];
+      adder.removed = new Set();
+      if (!adder.textEdited) $('adder-text').value = slot?.text || '';
+      renderAdder();
+    }
 
-      const types = $('confirm-types');
+    function renderAdder() {
+      const shown = adderShown();
+      const box = $('adder-slots');
+      box.innerHTML = '';
+      for (let i = 0; i < Math.max(MAX_PHOTOS, shown.length); i++) {
+        const p = shown[i];
+        if (!p) {
+          // 空き枠：タップでカメラ起動
+          const b = document.createElement('button');
+          b.className = 'add-slot empty';
+          b.textContent = '＋';
+          b.setAttribute('aria-label', `写真${i + 1}をカメラで撮る`);
+          b.addEventListener('click', startCamera);
+          box.appendChild(b);
+          continue;
+        }
+        const isNew = adder.added.includes(p);
+        const div = document.createElement('div');
+        div.className = 'add-slot';
+        div.innerHTML = `<img alt="写真${i + 1}"><button class="remove" aria-label="外す">×</button>` +
+          (isNew ? '<span class="new">追加</span>' : '');
+        div.querySelector('img').src = adderUrls.get(p.blob);
+        div.querySelector('img').addEventListener('click', () => openViewer(shown, i, null));
+        div.querySelector('.remove').addEventListener('click', () => {
+          if (isNew) adder.added = adder.added.filter((x) => x !== p);
+          else adder.removed.add(p.id);
+          renderAdder();
+        });
+        box.appendChild(div);
+      }
+
+      const over = shown.length > MAX_PHOTOS;
+      $('adder-camera').disabled = shown.length >= MAX_PHOTOS;
+      $('adder-gallery').disabled = shown.length >= MAX_PHOTOS;
+      $('adder-save').disabled = over;
+      const note = $('adder-note');
+      note.classList.toggle('warn', over);
+      note.textContent = over
+        ? `${MAX_PHOTOS}枚までです。×で${shown.length - MAX_PHOTOS}枚減らしてください`
+        : adder.existing.length
+          ? `この日の${TYPES[adder.type].label}に保存済みの写真も並んでいます`
+          : '';
+
+      $('adder-date').value = adder.day;
+      const types = $('adder-types');
       types.innerHTML = '';
       for (const key of TYPE_ORDER) {
         const b = document.createElement('button');
-        b.className = 'type-btn' + (pending.type === key ? ' selected' : '');
+        b.className = 'type-btn' + (adder.type === key ? ' selected' : '');
         b.textContent = `${TYPES[key].icon} ${TYPES[key].label}`;
         b.addEventListener('click', () => {
-          pending.type = key;
-          renderConfirm();
+          adder.picked = true;
+          adder.type = key;
+          renderAdder();
+          loadAdderSlot();
         });
         types.appendChild(b);
       }
-
-      // すでに写真がある場合は、そこに追加されることを知らせる
-      const { day, type } = pending;
-      const slot = await getSlot(slotKey(day, type));
-      if (!pending || pending.day !== day || pending.type !== type) return; // 途中で変わった
-      $('confirm-note').textContent = slot?.photos.length
-        ? `この日の${TYPES[type].label}にはすでに${slot.photos.length}枚あります。そこに追加します。`
-        : '';
-      // まだ文字を触っていなければ、すでにある文字を表示しておく
-      if (!pending.textEdited) $('confirm-text').value = slot?.text || '';
     }
-    $('confirm-text').addEventListener('input', () => {
-      if (pending) pending.textEdited = true;
-    });
 
-    $('confirm-date').addEventListener('change', () => {
-      if ($('confirm-date').value) {
-        pending.day = $('confirm-date').value;
-        renderConfirm();
+    // 撮った・選んだ写真を空き枠に入れる
+    function addToAdder(photos) {
+      const fit = photos.slice(0, Math.max(0, MAX_PHOTOS - adderShown().length));
+      if (fit.length < photos.length) toast(`${MAX_PHOTOS}枚までなので、${fit.length}枚だけ追加しました`, 4000);
+      if (fit.length === 0) return;
+      // ギャラリーの写真で、日付・種類をまだ触っていなければ、撮影日時に合わせる
+      const auto = !adder.picked && adder.added.length === 0 && fit[0].source === 'gallery';
+      adder.added.push(...fit);
+      if (auto) {
+        const first = Math.min(...fit.map((p) => p.takenAt));
+        if (dayKey(first) !== adder.day || typeByTime(first) !== adder.type) {
+          adder.day = dayKey(first);
+          adder.type = typeByTime(first);
+          loadAdderSlot();
+        }
       }
+      renderAdder();
+    }
+
+    $('adder-camera').addEventListener('click', startCamera);
+    $('adder-gallery').addEventListener('click', () => galleryInput.click());
+    $('adder-date').addEventListener('change', () => {
+      if (!$('adder-date').value) return;
+      adder.picked = true;
+      adder.day = $('adder-date').value;
+      renderAdder();
+      loadAdderSlot();
     });
-    $('confirm-cancel').addEventListener('click', closeLayer);
-    $('confirm-save').addEventListener('click', async () => {
-      if (!pending) return;
-      const { day, type, photos, textEdited } = pending;
+    $('adder-text').addEventListener('input', () => {
+      if (adder) adder.textEdited = true;
+    });
+    $('adder-close').addEventListener('click', closeLayer);
+    $('adder-cancel').addEventListener('click', closeLayer);
+    $('adder-save').addEventListener('click', async () => {
+      if (!adder || adderShown().length > MAX_PHOTOS) return;
+      const { day, type, removed, added, textEdited } = adder;
+      const text = textEdited ? $('adder-text').value.trim() : null;
+      if (added.length === 0 && removed.size === 0 && text === null) {
+        toast('写真を撮るか、文字を入れてください');
+        return;
+      }
       try {
-        await addPhotosToSlot(day, type, photos);
-        if (textEdited) await setSlotText(day, type, $('confirm-text').value.trim());
-        confirmDone = true;
+        await commitSlot(day, type, removed, added, text);
+        adder.done = true;
         closeLayer();
         toast(`${formatDay(day)}の${TYPES[type].label}に保存しました`);
         refreshAll();
@@ -1386,11 +1790,12 @@
         const slot = slots.find((s) => s.type === type);
         const sec = document.createElement('section');
         sec.className = 'ed-sec';
+        const count = slot?.photos.length || 0;
         sec.innerHTML = `
           <div class="ed-head">${TYPES[type].icon} ${TYPES[type].label}
-            <button class="ed-add">＋追加</button>
+            ${count < MAX_PHOTOS ? '<button class="ed-add">＋追加</button>' : ''}
           </div>`;
-        sec.querySelector('.ed-add').addEventListener('click', () => openChooser(day, type));
+        sec.querySelector('.ed-add')?.addEventListener('click', () => openChooser(day, type));
 
         if (!slot?.photos.length) {
           sec.insertAdjacentHTML('beforeend', '<div class="ed-none">写真なし</div>');
@@ -1406,7 +1811,11 @@
               <button class="star" aria-label="代表にする">${isCover ? '★' : '☆'}</button>
               <button class="remove" aria-label="削除">×</button>
               <select aria-label="種類を移動">
-                ${TYPE_ORDER.map((t) => `<option value="${t}"${t === type ? ' selected' : ''}>${TYPES[t].label}${t === type ? '' : 'へ移動'}</option>`).join('')}
+                ${TYPE_ORDER.map((t) => {
+                  if (t === type) return `<option value="${t}" selected>${TYPES[t].label}</option>`;
+                  const full = (slots.find((s) => s.type === t)?.photos.length || 0) >= MAX_PHOTOS;
+                  return `<option value="${t}"${full ? ' disabled' : ''}>${TYPES[t].label}${full ? '（3枚）' : 'へ移動'}</option>`;
+                }).join('')}
               </select>`;
             div.querySelector('img').src = editorUrls.get(p.blob);
             div.querySelector('img').addEventListener('click', () => openViewer(slot.photos, i, slot.key));
@@ -1421,8 +1830,10 @@
               refreshAll();
             });
             div.querySelector('select').addEventListener('change', async (e) => {
-              await movePhoto(slot.key, p.id, e.target.value);
-              toast(`${TYPES[e.target.value].label}へ移動しました`);
+              const moved = await movePhoto(slot.key, p.id, e.target.value);
+              toast(moved
+                ? `${TYPES[e.target.value].label}へ移動しました`
+                : `${TYPES[e.target.value].label}は${MAX_PHOTOS}枚まで登録済みです`);
               refreshAll();
             });
             grid.appendChild(div);
@@ -1643,7 +2054,11 @@
             if (slot.photos.length > 1) {
               box.insertAdjacentHTML('beforeend', `<span class="badge">❐${slot.photos.length}</span>`);
             }
-            box.addEventListener('click', () => openViewer(slot.photos, coverIndex, slot.key));
+            // 1枚ならすぐ拡大、2〜3枚なら縦に並べて表示
+            box.addEventListener('click', () => {
+              if (slot.photos.length === 1) openViewer(slot.photos, 0, slot.key);
+              else openStack(slot.key);
+            });
           } else {
             box.classList.add('none');
             box.innerHTML = 'なし<br>＋';
@@ -1660,7 +2075,78 @@
     function refreshAll() {
       showList();
       renderDayEditor();
+      renderStack();
     }
+
+    // =====================================================
+    // 写真を縦に並べる表示（2〜3枚のマスから。1画面に収める）
+    // 「代表にする」で代表に、写真をタップすると拡大
+    // =====================================================
+    let stackKey = null;
+    const stackUrls = makeUrlCache();
+
+    function openStack(key) {
+      stackKey = key;
+      renderStack();
+      openLayer($('stack'), {
+        onClose: () => {
+          stackKey = null;
+          stackUrls.clear();
+        },
+      });
+    }
+
+    async function renderStack() {
+      if (!stackKey) return;
+      const key = stackKey;
+      const slot = await getSlot(key);
+      if (stackKey !== key) return;
+      if (!slot || slot.photos.length === 0) return closeLayer(); // 写真がなくなった
+      stackUrls.clear();
+      $('stack-title').textContent = `${formatDay(slot.day)}　${TYPES[slot.type].label}`;
+      $('stack-text').textContent = slot.text || '';
+      const list = $('stack-list');
+      list.innerHTML = '';
+      slot.photos.forEach((p, i) => {
+        const isCover = p.id === slot.cover;
+        const item = document.createElement('div');
+        item.className = 'stack-item';
+        item.innerHTML = `<img alt="写真${i + 1}">
+          <button class="cover-btn${isCover ? ' is-cover' : ''}">${isCover ? '★ 代表写真' : '☆ 代表にする'}</button>`;
+        item.querySelector('img').src = stackUrls.get(p.blob);
+        item.querySelector('img').addEventListener('click', () => openViewer(slot.photos, i, key));
+        item.querySelector('.cover-btn').addEventListener('click', async () => {
+          if (isCover) return;
+          await setCover(key, p.id);
+          toast('代表写真にしました');
+          refreshAll();
+        });
+        list.appendChild(item);
+      });
+    }
+    $('stack-close').addEventListener('click', closeLayer);
+
+    // =====================================================
+    // ページの切り替え（ボトムナビ）と設定
+    // =====================================================
+    document.querySelectorAll('.bottom-nav [data-page]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.bottom-nav [data-page]').forEach((b) => b.classList.toggle('active', b === btn));
+        document.querySelectorAll('.page').forEach((p) => p.classList.toggle('active', p.id === 'page-' + btn.dataset.page));
+        window.scrollTo(0, 0);
+      });
+    });
+    $('nav-add').addEventListener('click', openAdder);
+
+    document.querySelectorAll('input[name="camera"]').forEach((radio) => {
+      radio.checked = radio.value === cameraSetting;
+      radio.addEventListener('change', () => {
+        if (radio.checked) {
+          setCameraSetting(radio.value);
+          toast(radio.value === 'quiet' ? '静音カメラを使います' : 'きれいなカメラを使います');
+        }
+      });
+    });
 
     // =====================================================
     // バックアップ（暗号化した ZIP = .mlbk）
@@ -1785,6 +2271,7 @@
         let added = 0;
         let skipped = 0;
         let texts = 0;
+        let overflow = 0;
         for (const part of parts) {
           // 文字は、こちらにまだ文字がないときだけ入れる
           if (part.text && (await setSlotText(part.day, part.type, part.text, true))) texts++;
@@ -1800,11 +2287,15 @@
             existing.add(p.id);
           }
           if (photos.length === 0) continue;
-          await addPhotosToSlot(part.day, part.type, photos, part.cover);
-          added += photos.length;
+          // 1つの枠は3枚まで（3枚を超える分は代表を残して減らし、入りきらない分は入れない）
+          const ordered = trimSlot({ photos, cover: part.cover }).photos;
+          const n = await addPhotosToSlot(part.day, part.type, ordered, part.cover);
+          added += n;
+          overflow += photos.length - n;
         }
         toast(`読み込みました：写真${added}枚` + (texts ? `・文字${texts}件` : '') + 'を追加' +
-          (skipped ? `・重複などで飛ばした ${skipped}枚` : ''), 4000);
+          (skipped ? `・重複などで飛ばした ${skipped}枚` : '') +
+          (overflow ? `・${MAX_PHOTOS}枚を超えて入らなかった ${overflow}枚` : ''), 5000);
         refreshAll();
       } catch (e) {
         toast('読み込みに失敗しました：' + e.message, 5000);
