@@ -830,6 +830,20 @@
       color: #fff;
       font-size: 0.85em;
     }
+    #viewer-crop {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 10px;
+      border: 1px solid #888;
+      border-radius: 8px;
+      background: none;
+      color: #fff;
+      font-size: 0.85em;
+    }
+    #viewer-crop .ico {
+      font-size: 15px;
+    }
     #viewer-cover.is-cover {
       border-color: var(--star);
       background: var(--star);
@@ -2071,6 +2085,11 @@
     .ed-tool .ico {
       font-size: 17px;
     }
+    /* 4:3 でない写真の「切り抜く」は色を付けて目立たせる */
+    .ed-tool.crop-tool.warn {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
     .ed-tool.star-tool.on .ico {
       fill: currentColor; /* メイン写真は★を塗りつぶす */
     }
@@ -2442,6 +2461,28 @@
       font-size: 0.92em;
       word-break: break-all;
     }
+    /* 写真の取り込みの進み具合 */
+    .pi-bar {
+      height: 8px;
+      margin: 8px 0 4px;
+      border-radius: 4px;
+      background: var(--tile);
+      overflow: hidden;
+    }
+    #pi-bar {
+      width: 0;
+      height: 100%;
+      background: var(--accent);
+      transition: width 0.2s;
+    }
+    .backup-btn.disabled {
+      opacity: 0.45;
+      pointer-events: none;
+    }
+    #photo-import-group.drop-on {
+      outline: 2px dashed var(--accent);
+      outline-offset: 4px;
+    }
     .ti-err {
       margin-top: 8px;
       color: #c0392b;
@@ -2700,6 +2741,7 @@
       <label><input type="checkbox" data-album-type="dinner" checked>夕食</label>
       <label><input type="checkbox" id="al-fav"><span class="heart on al-heart"></span>お気に入りのみ</label>
       <label><input type="checkbox" id="al-main"><span class="star-mark">★</span>メイン写真のみ</label>
+      <label><input type="checkbox" id="al-not43">4:3でない写真のみ</label>
       <label><input type="checkbox" id="al-showfav" checked><span class="heart al-heart-off"></span>ボタンを表示</label>
     </div>
     <div class="filter">
@@ -2769,6 +2811,24 @@
         </div>
       </div>
     </div>
+    <!-- PCなどにある写真（ZIP・JPEG）をまとめて取り込む（サンプル表示のときは出さない） -->
+    <div id="photo-import-group" class="set-group">
+      <div class="set-title"><i data-icon="photo"></i>写真をまとめて取り込む</div>
+      <p class="set-note">
+        ZIPファイルか、JPEGの写真（複数可）を選んでください。PCではここにドラッグ＆ドロップもできます。<br>
+        撮影日時から日付と種類を決めます。日時が記録されていない写真は取り込みません。1回の食事が3枚を超えたら、同じ日の空いている食事（時刻の近い順、最後に日記）に入れます。<br>
+        取り込み済みの写真は飛ばすので、途中で止めても、同じファイルを選び直せば続きから取り込めます。
+      </p>
+      <label for="pi-file" id="pi-pick" class="backup-btn"><i data-icon="upload"></i>ZIP・写真を選ぶ</label>
+      <div id="pi-progress" class="ti-preview" hidden>
+        <div id="pi-status"></div>
+        <div class="pi-bar"><div id="pi-bar"></div></div>
+        <div class="actions">
+          <button id="pi-stop" class="btn-sub">止める</button>
+        </div>
+      </div>
+      <div id="pi-result" class="ti-preview" hidden></div>
+    </div>
     <!-- サンプル表示のときは出さない -->
     <div id="sample-group" class="set-group">
       <div class="set-title"><i data-icon="photo"></i>このアプリを紹介する</div>
@@ -2796,6 +2856,7 @@
   <input type="file" id="gallery-input" class="hidden-input" accept="image/*" multiple>
   <!-- .mlbk は Android が知らない拡張子で、accept で絞ると選べなくなるため、絞らずに中身で判定する -->
   <input type="file" id="import-file" class="hidden-input">
+  <input type="file" id="pi-file" class="hidden-input" accept=".zip,application/zip,image/jpeg,image/*" multiple>
 
   <!-- 写真を追加（ボトムナビの＋から） -->
   <div id="adder" class="overlay">
@@ -2935,6 +2996,7 @@
       <button id="viewer-close" class="back-btn" aria-label="戻る">←</button>
       <span id="viewer-count"></span>
       <span class="spacer"></span>
+      <button id="viewer-crop" aria-label="切り抜く"><i data-icon="crop"></i>切り抜く</button>
       <button id="viewer-cover"></button>
       <button id="viewer-fav" class="fav-btn"></button>
     </div>
@@ -2999,6 +3061,7 @@
       upload: '<path d="M12 15V4M7.5 8.5L12 4l4.5 4.5"/><path d="M5 19.5h14"/>',
       clock: '<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>',
       info: '<circle cx="12" cy="12" r="8"/><path d="M12 11v5M12 8h.01"/>',
+      crop: '<path d="M7 3v12.5A1.5 1.5 0 0 0 8.5 17H21"/><path d="M3 7h12.5A1.5 1.5 0 0 1 17 8.5V21"/>',
       palette: '<path d="M12 4a8 8 0 1 0 0 16c1.2 0 1.7-.9 1.3-1.8-.4-1 .3-2.2 1.7-2.2H17a3 3 0 0 0 3-3c0-5-3.6-9-8-9z"/><circle cx="8" cy="11" r="1"/><circle cx="11" cy="7.5" r="1"/><circle cx="15.5" cy="8.5" r="1"/>',
     };
     function svgIcon(name) {
@@ -3016,7 +3079,7 @@
     };
     const TYPE_ORDER = ['diary', 'breakfast', 'lunch', 'dinner'];
     const MEMO = 'memo'; // ひとこと（1日1つ。写真なしの文字だけ）
-    const SOURCE_ICON = { app: 'カメラ', quiet: '静音カメラ', gallery: 'ギャラリー' }; // 拡大表示の撮り方の表示
+    const SOURCE_ICON = { app: 'カメラ', quiet: '静音カメラ', gallery: 'ギャラリー', import: 'まとめて取り込み' }; // 拡大表示の撮り方の表示
     // 以前の「間食」は「日記」になった
     const normType = (t) => (t === 'snack' ? 'diary' : t);
     const MAX_PHOTOS = 3; // 日記・食事ごとの写真の上限
@@ -3116,7 +3179,8 @@
     function makeUrlCache() {
       let current = new Map();
       let previous = new Map();
-      const keyOf = (photo) => photo.id || photo.blob;
+      // v … 切り抜き直した回数（同じ id でも画像が変わるので、別の URL にする）
+      const keyOf = (photo) => (photo.id ? `${photo.id}:${photo.v || 0}` : photo.blob);
       return {
         get(photo) {
           const key = keyOf(photo);
@@ -3525,7 +3589,8 @@
     // =====================================================
     let cropState = null; // { resolve, rect(画像の実寸での枠), scale, frame(表示上の枠) }
 
-    function askCrop(file, index, count) {
+    // later … 保存済みの写真をあとから切り抜く（4:3 でも聞く。「元のまま」は「やめる」になる）
+    function askCrop(file, index, count, later = false) {
       return new Promise(async (resolve) => {
         const url = URL.createObjectURL(file);
         const img = $('crop-img');
@@ -3534,11 +3599,12 @@
           await img.decode();
         } catch {
           URL.revokeObjectURL(url);
-          resolve({ mode: 'orig' }); // 表示できない形式は元のまま
+          resolve({ mode: later ? 'skip' : 'orig' }); // 表示できない形式は元のまま
           return;
         }
+        $('crop-orig').textContent = later ? 'やめる' : '元のまま';
         const ratio = img.naturalWidth / img.naturalHeight;
-        if (Math.abs(ratio - 4 / 3) < 0.02) {
+        if (!later && Math.abs(ratio - 4 / 3) < 0.02) {
           URL.revokeObjectURL(url);
           resolve({ mode: 'orig' });
           return;
@@ -3711,6 +3777,39 @@
       bitmap.close();
       return canvas;
     }
+
+    // 保存済みの写真を、あとから 4:3 に切り抜く（同じ写真として置き換える。メイン・お気に入りなどはそのまま）
+    // 切り抜いたら新しい写真の情報を返す（やめたら null）
+    async function recropPhoto(key, photoId) {
+      const slot = await getSlot(key);
+      const p = slot?.photos.find((x) => x.id === photoId);
+      if (!p) return null;
+      const choice = await askCrop(p.blob, 0, 1, true);
+      if (choice.mode !== 'crop') return null;
+      try {
+        toast('切り抜き中…', 0);
+        const canvas = await cropToCanvas(p.blob, choice.rect);
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.85));
+        const changes = { blob, width: canvas.width, height: canvas.height, v: (p.v || 0) + 1 };
+        const saved = await updatePhoto(key, photoId, changes);
+        toast(saved ? '切り抜きました' : '写真が見つかりませんでした', 2500);
+        refreshAll();
+        return saved ? { ...p, ...changes } : null;
+      } catch (e) {
+        toast('切り抜けませんでした：' + e.message, 5000);
+        return null;
+      }
+    }
+    const updatePhoto = (key, photoId, changes) => serial(async () => {
+      const slot = await getSlot(key);
+      const p = slot?.photos.find((x) => x.id === photoId);
+      if (!p) return false;
+      Object.assign(p, changes);
+      await putSlot(slot);
+      return true;
+    });
+    // 4:3 かどうか（大きさが分からない写真は 4:3 とみなす）
+    const is43 = (p) => !p.width || !p.height || Math.abs(p.width / p.height - 4 / 3) < 0.02;
 
     const cameraInput = $('camera-input');
     const galleryInput = $('gallery-input');
@@ -4001,7 +4100,9 @@
                 <button class="ed-tool star-tool${isCover ? ' on' : ''}" aria-label="${isCover ? 'メイン写真' : 'メインにする'}">${svgIcon('star')}</button>
                 <button class="ed-tool fav-tool"></button>
                 <button class="ed-tool cal-tool${p.cal ? ' on' : ''}" aria-label="${p.cal ? 'カレンダー写真をやめる' : 'カレンダー写真にする'}">${svgIcon('calendar')}</button>
+                <button class="ed-tool crop-tool${is43(p) ? '' : ' warn'}" aria-label="切り抜く">${svgIcon('crop')}</button>
               </div>`;
+            div.querySelector('.crop-tool').addEventListener('click', () => recropPhoto(slot.key, p.id));
             const fav = div.querySelector('.fav-tool');
             setFavButton(fav, p.fav);
             fav.addEventListener('click', () => flipFav(slot.key, p, fav));
@@ -4224,6 +4325,7 @@
       coverBtn.textContent = isCover ? '★ メイン写真' : '☆ メインにする';
       coverBtn.classList.toggle('is-cover', !!isCover);
       $('viewer-fav').style.display = slot ? '' : 'none';
+      $('viewer-crop').style.display = slot ? '' : 'none';
       setFavButton($('viewer-fav'), p.fav);
       // アルバムから開いたときは、どの日の何の写真かも出す
       const where = viewerFromAlbum && slot ? `${formatDay(slot.day)} ${TYPES[slot.type].label}` : '';
@@ -4255,6 +4357,15 @@
     $('viewer-fav').addEventListener('click', () => {
       const key = viewerKeys[viewerIndex];
       if (key) flipFav(key, viewerPhotos[viewerIndex], $('viewer-fav'));
+    });
+    $('viewer-crop').addEventListener('click', async () => {
+      const i = viewerIndex;
+      const key = viewerKeys[i];
+      if (!key) return;
+      const done = await recropPhoto(key, viewerPhotos[i].id);
+      if (!done || !$('viewer').classList.contains('open')) return;
+      viewerPhotos[i] = done;
+      renderViewer();
     });
     $('viewer-close').addEventListener('click', closeLayer);
     $('viewer-prev').addEventListener('click', () => moveViewer(-1));
@@ -4697,6 +4808,7 @@
         .filter((el) => el.checked).map((el) => el.dataset.albumType));
       const favOnly = $('al-fav').checked;
       const mainOnly = $('al-main').checked;
+      const not43Only = $('al-not43').checked;
       const y = albumYear;
       const m = albumMonth;
 
@@ -4708,6 +4820,7 @@
         for (const p of s.photos) {
           if (favOnly && !p.fav) continue;
           if (mainOnly && p.id !== s.cover) continue;
+          if (not43Only && is43(p)) continue;
           items.push({ p, key: s.key, day: s.day });
         }
       }
@@ -5549,6 +5662,283 @@
     }));
 
     // =====================================================
+    // 写真をまとめて取り込む（ZIP・JPEG。PCにある写真を想定）
+    //   1. 全部の写真の撮影日時を読む（EXIF。無ければ Googleデータエクスポートの .json）。日時が無い写真は捨てる
+    //   2. 日ごとに、撮影時刻で種類を決める。3枚で埋まったら、同じ日の空いている食事
+    //      （時刻の近い順、最後に日記）へ。4つとも埋まったら捨てる
+    //   3. 1枚ずつ縮小（長い辺1000px・元のアスペクト比）して、1日分ずつ保存する
+    //   同じ写真（撮影日時と元のサイズが同じ）は飛ばすので、止めても選び直せば続きから取り込める
+    // =====================================================
+    let piStop = false;
+    let piRunning = false;
+    const piSig = (time, size) => `${time}|${size}`;
+
+    // Googleデータエクスポートの .json（写真の名前.json / 写真の名前.supplemental-metadata.json。長い名前は途中で切れる）
+    function findSidecar(name, jsonNames) {
+      const exact = jsonNames.get(name + '.json');
+      if (exact) return exact;
+      for (const [jn, entry] of jsonNames) {
+        const base = jn.slice(0, -5);
+        if (base.startsWith(name + '.')) return entry;
+        if (base.length > name.length && (name + '.supplemental-metadata').startsWith(base)) return entry;
+        if (base.length >= 40 && name.startsWith(base)) return entry;
+      }
+      return null;
+    }
+    async function readSidecarTime(entry) {
+      try {
+        const data = JSON.parse(await entry.async('string'));
+        const t = Number(data.photoTakenTime?.timestamp);
+        return t > 0 ? t * 1000 : null;
+      } catch {
+        return null;
+      }
+    }
+
+    // 選んだファイル（ZIPは中身）を「写真1枚ずつ」の並びにする
+    //   { name, getBlob(), sidecar(json の entry か null) }
+    async function collectPhotoItems(files, stats) {
+      const items = [];
+      for (const f of files) {
+        if (/\.zip$/i.test(f.name) || f.type === 'application/zip' || f.type === 'application/x-zip-compressed') {
+          piStatus(`ZIPを開いています…（${f.name}・${formatSize(f.size)}）`, 0);
+          let zip;
+          try {
+            zip = await JSZip.loadAsync(f);
+          } catch (e) {
+            throw new Error(`${f.name} を開けませんでした（大きすぎるか、ZIPではありません）`);
+          }
+          // フォルダごとに .json を集めておく
+          const jsons = new Map(); // フォルダ → Map(名前 → entry)
+          const photos = [];
+          zip.forEach((path, entry) => {
+            if (entry.dir || path.startsWith('__MACOSX/')) return;
+            const slash = path.lastIndexOf('/');
+            const dir = path.slice(0, slash + 1);
+            const name = path.slice(slash + 1);
+            if (name.startsWith('.')) return;
+            if (/\.json$/i.test(name)) {
+              if (!jsons.has(dir)) jsons.set(dir, new Map());
+              jsons.get(dir).set(name, entry);
+            } else if (/\.jpe?g$/i.test(name)) {
+              photos.push({ dir, name, entry });
+            } else if (/\.(png|heic|heif|webp|gif|bmp|dng|avif)$/i.test(name)) {
+              stats.notJpeg++;
+            }
+          });
+          for (const p of photos) {
+            items.push({
+              name: p.name,
+              getBlob: async () => new Blob([await p.entry.async('arraybuffer')], { type: 'image/jpeg' }),
+              sidecar: jsons.has(p.dir) ? findSidecar(p.name, jsons.get(p.dir)) : null,
+            });
+          }
+        } else if (/\.jpe?g$/i.test(f.name) || f.type === 'image/jpeg') {
+          items.push({ name: f.name, getBlob: async () => f, sidecar: null });
+        } else if (f.type.startsWith('image/') || /\.(heic|heif)$/i.test(f.name)) {
+          stats.notJpeg++;
+        }
+      }
+      return items;
+    }
+
+    // 撮影時刻と食事の時間帯の離れ具合（時間帯の中なら 0）
+    function mealDistance(time, meal) {
+      const d = new Date(time);
+      const h = d.getHours() + d.getMinutes() / 60;
+      const [s, e] = mealTimes[meal];
+      return h < s ? s - h : h >= e ? h - e : 0;
+    }
+
+    // 1日分の写真（撮影時刻順）に種類を割り振る。counts は今ある枚数（書き換えながら使う）
+    function planDay(photos, counts, stats) {
+      const placed = [];
+      const rest = [];
+      // まず撮影時刻どおりの種類に入れる（入りきらない分はあとで）
+      for (const p of photos) {
+        const t = typeByTime(p.time);
+        if (counts[t] < MAX_PHOTOS) {
+          counts[t]++;
+          placed.push({ ...p, type: t });
+        } else {
+          rest.push(p);
+        }
+      }
+      // 入りきらなかった分は、空いている食事の時刻の近い順、最後に日記
+      for (const p of rest) {
+        const meals = MEALS.filter((m) => counts[m] < MAX_PHOTOS)
+          .sort((a, b) => mealDistance(p.time, a) - mealDistance(p.time, b));
+        const t = meals[0] || (counts.diary < MAX_PHOTOS ? 'diary' : null);
+        if (!t) {
+          stats.full++;
+          continue;
+        }
+        counts[t]++;
+        placed.push({ ...p, type: t });
+      }
+      return placed.sort((a, b) => a.time - b.time);
+    }
+
+    function piStatus(text, ratio) {
+      $('pi-status').textContent = text;
+      $('pi-bar').style.width = Math.round(ratio * 100) + '%';
+    }
+
+    async function importPhotoFiles(files) {
+      if (piRunning || files.length === 0) return;
+      piRunning = true;
+      piStop = false;
+      $('pi-result').hidden = true;
+      $('pi-progress').hidden = false;
+      $('pi-pick').classList.add('disabled');
+      const stats = { added: 0, days: new Set(), noDate: 0, dup: 0, notJpeg: 0, full: 0, failed: 0, not43: 0, stopped: false };
+      try {
+        const items = await collectPhotoItems(files, stats);
+
+        // 1. 撮影日時を読む
+        const all = await getAllSlots();
+        const seen = new Set(all.flatMap((s) => s.photos.map((p) => piSig(p.takenAt, p.originalSize))));
+        const byDay = new Map();
+        for (let i = 0; i < items.length; i++) {
+          if (piStop) break;
+          if (i % 5 === 0) piStatus(`撮影日時を確認中… ${i} / ${items.length}枚`, i / items.length);
+          const it = items[i];
+          try {
+            const blob = await it.getBlob();
+            const time = (await readExifDate(blob)) ?? (it.sidecar ? await readSidecarTime(it.sidecar) : null);
+            if (!time) {
+              stats.noDate++;
+              continue;
+            }
+            const sig = piSig(time, blob.size);
+            if (seen.has(sig)) {
+              stats.dup++;
+              continue;
+            }
+            seen.add(sig);
+            const day = dayKey(time);
+            if (!byDay.has(day)) byDay.set(day, []);
+            byDay.get(day).push({ item: it, time, size: blob.size });
+          } catch {
+            stats.failed++;
+          }
+        }
+
+        // 2. 日ごとに種類を割り振る
+        const counts = new Map(all.map((s) => [s.key, s.photos.length]));
+        const plan = [];
+        for (const day of [...byDay.keys()].sort()) {
+          const c = {};
+          for (const t of TYPE_ORDER) c[t] = counts.get(slotKey(day, t)) || 0;
+          const photos = byDay.get(day).sort((a, b) => a.time - b.time);
+          const placed = planDay(photos, c, stats);
+          if (placed.length) plan.push({ day, placed });
+        }
+        const total = plan.reduce((n, d) => n + d.placed.length, 0);
+
+        // 3. 縮小して1日分ずつ保存
+        if (total > 0 && !piStop) {
+          await saveUndo(all, '写真の取り込み');
+          let done = 0;
+          for (const { day, placed } of plan) {
+            const byType = new Map();
+            for (const p of placed) {
+              if (piStop) break;
+              piStatus(`取り込み中… ${done} / ${total}枚（${formatDay(day)}）`, done / total);
+              try {
+                const blob = await p.item.getBlob();
+                const photo = await makePhoto(blob, 'import', p.size, p.time);
+                if (!is43(photo)) stats.not43++;
+                if (!byType.has(p.type)) byType.set(p.type, []);
+                byType.get(p.type).push(photo);
+              } catch {
+                stats.failed++;
+              }
+              done++;
+            }
+            for (const [type, photos] of byType) {
+              const n = await addPhotosToSlot(day, type, photos);
+              stats.added += n;
+              stats.full += photos.length - n;
+              if (n) stats.days.add(day);
+            }
+            if (piStop) break;
+          }
+          piStatus(`取り込み中… ${done} / ${total}枚`, 1);
+        }
+        stats.stopped = piStop;
+      } catch (e) {
+        stats.error = e.message;
+      } finally {
+        piRunning = false;
+        $('pi-progress').hidden = true;
+        $('pi-pick').classList.remove('disabled');
+        showPhotoImportResult(stats);
+        refreshAll();
+        renderUndo();
+      }
+    }
+
+    function showPhotoImportResult(s) {
+      const lines = [];
+      if (s.error) lines.push(`<div class="ti-err">取り込めませんでした：${escapeHtml(s.error)}</div>`);
+      lines.push(`<b>写真${s.added}枚を取り込みました</b>` + (s.days.size ? `（${s.days.size}日分）` : ''));
+      if (s.stopped) lines.push('途中で止めました。同じファイルを選び直すと、続きから取り込めます。');
+      const skip = [
+        [s.dup, '取り込み済みのため飛ばした'],
+        [s.noDate, '撮影日時がないため飛ばした'],
+        [s.notJpeg, 'JPEG以外（HEIC・PNG など）のため飛ばした'],
+        [s.full, 'その日の枠（4つ×3枚）が埋まっていて入らなかった'],
+        [s.failed, '読み込めなかった'],
+      ].filter(([n]) => n > 0).map(([n, t]) => `・${t}写真：${n}枚`);
+      lines.push(...skip);
+      if (s.not43) lines.push(`4:3でない写真が${s.not43}枚あります。アルバムの「4:3でない写真のみ」で探して、写真を開いて「切り抜く」で直せます。`);
+      if (s.added) lines.push('取り込む前の状態には、バックアップの「元に戻す」で1回だけ戻せます。');
+      $('pi-result').innerHTML = lines.join('<br>');
+      $('pi-result').hidden = false;
+      toast(s.error ? '取り込めませんでした' : `写真${s.added}枚を取り込みました`, 3000);
+    }
+
+    const piFile = $('pi-file');
+    piFile.addEventListener('change', () => {
+      const files = [...piFile.files];
+      piFile.value = '';
+      importPhotoFiles(files);
+    });
+    $('pi-pick').addEventListener('click', (e) => {
+      if (piRunning) e.preventDefault();
+    });
+    $('pi-stop').addEventListener('click', () => {
+      piStop = true;
+      piStatus('止めています…（今の写真が終わるまでお待ちください）', parseFloat($('pi-bar').style.width) / 100 || 0);
+    });
+    // 取り込み中にアプリを閉じようとしたら確認する
+    addEventListener('beforeunload', (e) => {
+      if (piRunning) e.preventDefault();
+    });
+    // PC：設定の「写真をまとめて取り込む」にドラッグ＆ドロップ。それ以外の場所に落としたときは何もしない
+    {
+      const group = $('photo-import-group');
+      const hasFiles = (e) => [...(e.dataTransfer?.types || [])].includes('Files');
+      addEventListener('dragover', (e) => {
+        if (!hasFiles(e)) return;
+        e.preventDefault();
+        const on = !SAMPLE_MODE && group.contains(e.target);
+        group.classList.toggle('drop-on', on);
+        e.dataTransfer.dropEffect = on ? 'copy' : 'none';
+      });
+      addEventListener('dragleave', (e) => {
+        if (!e.relatedTarget) group.classList.remove('drop-on');
+      });
+      addEventListener('drop', (e) => {
+        if (!hasFiles(e)) return;
+        e.preventDefault();
+        group.classList.remove('drop-on');
+        if (!SAMPLE_MODE && group.contains(e.target)) importPhotoFiles([...e.dataTransfer.files]);
+      });
+    }
+
+    // =====================================================
     // サンプル表示のデータ（写真は Unsplash の無料写真＝Unsplash ライセンス。画像はアプリに持たず、
     // 開いたときにリンクから読み込む）。日付は「今日から何日前か」で書く
     // =====================================================
@@ -5655,6 +6045,7 @@
     if (SAMPLE_MODE) {
       $('sample-group').hidden = true;
       $('text-import-group').hidden = true;
+      $('photo-import-group').hidden = true;
       const notHere = (e) => {
         e.preventDefault();
         e.stopImmediatePropagation();
