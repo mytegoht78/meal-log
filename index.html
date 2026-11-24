@@ -266,6 +266,21 @@
     .hito-text.blank {
       color: #bbb;
     }
+    .hito {
+      align-items: center;
+      cursor: pointer;
+    }
+    /* その場で入力するときの欄 */
+    .hito-input {
+      flex: 1;
+      min-width: 0;
+      padding: 6px 8px;
+      border: 1px solid var(--accent);
+      border-radius: 6px;
+      background: #fff;
+      font-family: inherit;
+      font-size: 1em;
+    }
     .cell-box img {
       display: block;
       width: 100%;
@@ -276,6 +291,23 @@
     .cell-box {
       -webkit-touch-callout: none;
       user-select: none;
+    }
+    /* マスの中の写真を左右にスライド（1枚ずつピタッと止まる） */
+    .slides {
+      display: flex;
+      width: 100%;
+      height: 100%;
+      overflow-x: auto;
+      overscroll-behavior-x: contain;
+      scroll-snap-type: x mandatory;
+      scrollbar-width: none;
+    }
+    .slides::-webkit-scrollbar {
+      display: none;
+    }
+    .slides img {
+      flex: 0 0 100%;
+      scroll-snap-align: start;
     }
     .cell-box.none {
       border: 1px dashed #ccc;
@@ -295,6 +327,9 @@
       border-radius: 10px;
       background: rgba(0, 0, 0, 0.45);
       transform: translateX(-50%);
+    }
+    .dots {
+      pointer-events: none; /* 点の上からでも写真をスライドできるように */
     }
     .dots i {
       width: 7px;
@@ -874,6 +909,37 @@
     .cal-day.today {
       outline: 2px solid var(--accent);
       outline-offset: -2px;
+    }
+    /* 縦画面のカレンダー：日付を写真の上に分けて出し、その下に正方形の写真（重ならない） */
+    .cal-ph {
+      display: none;
+    }
+    #cal-grid .cal-day {
+      display: flex;
+      flex-direction: column;
+      aspect-ratio: auto;
+    }
+    #cal-grid .cal-num {
+      position: static;
+      order: -1;
+      padding: 1px 0 1px 4px;
+      color: var(--text);
+      line-height: 1.3;
+      text-align: left;
+      text-shadow: none;
+    }
+    #cal-grid .cal-day.sun .cal-num {
+      color: #d33;
+    }
+    #cal-grid .cal-day.sat .cal-num {
+      color: #36c;
+    }
+    #cal-grid .cal-day img,
+    #cal-grid .cal-ph {
+      display: block;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 1;
     }
     /* 写真はないが文字の記録がある日 */
     .cal-dot {
@@ -1657,18 +1723,6 @@
     </div>
   </div>
 
-  <!-- 文字の入力（文字だけの記録・ひとこと） -->
-  <!-- キーボードに隠れないよう、画面の上側に出す -->
-  <div id="text-sheet" class="overlay sheet-overlay top" style="z-index:13">
-    <div class="sheet">
-      <h2 id="text-title"></h2>
-      <input type="text" id="text-input" class="date-input" maxlength="200" enterkeyhint="done" autocomplete="off">
-      <div class="actions">
-        <button id="text-cancel" class="btn-sub">キャンセル</button>
-        <button id="text-save" class="btn-main">保存</button>
-      </div>
-    </div>
-  </div>
 
   <!-- 日の編集画面 -->
   <div id="day-editor" class="overlay">
@@ -2434,46 +2488,6 @@
 
 
     // =====================================================
-    // 文字の入力（文字だけの記録・ひとこと）
-    // =====================================================
-    let textSave = null;
-    function openTextSheet(title, value, placeholder, onSave) {
-      $('text-title').textContent = title;
-      const input = $('text-input');
-      input.value = value;
-      input.placeholder = placeholder;
-      textSave = onSave;
-      openLayer($('text-sheet'), { onClose: () => (textSave = null) });
-      setTimeout(() => input.focus(), 50);
-    }
-    async function saveTextSheet() {
-      const save = textSave;
-      if (!save) return;
-      const value = $('text-input').value.trim();
-      await closeLayer();
-      await save(value);
-    }
-    $('text-save').addEventListener('click', saveTextSheet);
-    $('text-input').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.isComposing) saveTextSheet();
-    });
-    $('text-cancel').addEventListener('click', closeLayer);
-
-    // ある日のある種類（またはひとこと）の文字を書く・直す
-    async function openTextEditor(day, type) {
-      const slot = await getSlot(slotKey(day, type));
-      const isMemo = type === MEMO;
-      openTextSheet(
-        `${formatDay(day)}の${isMemo ? 'ひとこと' : TYPES[type].label}`,
-        slot?.text || '',
-        isMemo ? '例：公園に遊びに行った' : '例：たまごかけご飯',
-        async (text) => {
-          await setSlotText(day, type, text);
-          refreshAll();
-        });
-    }
-
-    // =====================================================
     // 静音カメラ（カメラ映像の1コマを保存するので音が鳴らない）
     // =====================================================
     const video = $('quiet-video');
@@ -3138,7 +3152,7 @@
             <button class="day-edit">✎ 編集</button>
           </div>
           <div class="day-grid"></div>
-          <button class="hito"><span class="hito-label">ひとこと</span><span class="hito-text"></span></button>`;
+          <div class="hito" role="button" tabindex="0"><span class="hito-label">ひとこと</span><span class="hito-text"></span></div>`;
         sec.querySelector('.day-edit').addEventListener('click', () => openDayEditor(day));
         const grid = sec.querySelector('.day-grid');
 
@@ -3146,16 +3160,17 @@
         const hitoText = sec.querySelector('.hito-text');
         hitoText.textContent = memo || '＋ 書く';
         hitoText.classList.toggle('blank', !memo);
-        sec.querySelector('.hito').addEventListener('click', () => openTextEditor(day, MEMO));
+        sec.querySelector('.hito').addEventListener('click', () => editHitoInline(sec.querySelector('.hito'), day, memo || ''));
 
         for (const type of TYPE_ORDER) {
           const slot = daySlots[type];
           const cell = document.createElement('div');
           cell.innerHTML = `<div class="cell-label">${TYPES[type].label}</div>`;
-          const box = document.createElement('button');
+          // 写真のマスは中で横にスクロールさせるので button ではなく div にする
+          const box = document.createElement(slot?.photos.length ? 'div' : 'button');
           box.className = 'cell-box';
           if (slot?.text && !slot.photos.length) {
-            // 写真がなければ文字を出す（タップで追加方法の選択へ）
+            // 写真がなければ文字を出す（タップで写真を追加の画面へ）
             box.classList.add('text');
             const span = document.createElement('span');
             span.textContent = slot.text;
@@ -3163,15 +3178,29 @@
             box.addEventListener('click', () => openAdder(day, type));
           } else if (slot) {
             const coverIndex = Math.max(0, slot.photos.findIndex((p) => p.id === slot.cover));
-            const img = document.createElement('img');
-            img.alt = `${formatDay(day)}の${TYPES[type].label}`;
-            img.loading = 'lazy';
-            img.src = listUrls.get(slot.photos[coverIndex]);
-            box.appendChild(img);
+            box.setAttribute('role', 'button');
+            box.tabIndex = 0;
+            // 写真を横に並べ、マスの中で左右にスライドして切り替える（最初はメイン写真）
+            const slides = document.createElement('div');
+            slides.className = 'slides';
+            slot.photos.forEach((p, i) => {
+              const img = document.createElement('img');
+              img.alt = `${formatDay(day)}の${TYPES[type].label}（${i + 1}枚目）`;
+              img.loading = 'lazy';
+              img.src = listUrls.get(p);
+              slides.appendChild(img);
+            });
+            box.appendChild(slides);
             if (slot.photos.length > 1) {
-              // 枚数分の点。メイン写真の位置が白
+              // 枚数分の点。今見えている写真の位置が白
               box.insertAdjacentHTML('beforeend', '<span class="dots">' +
                 slot.photos.map((_, i) => `<i${i === coverIndex ? ' class="on"' : ''}></i>`).join('') + '</span>');
+              const dots = box.querySelectorAll('.dots i');
+              slides.addEventListener('scroll', () => {
+                const i = Math.round(slides.scrollLeft / slides.clientWidth);
+                dots.forEach((d, j) => d.classList.toggle('on', j === i));
+              }, { passive: true });
+              requestAnimationFrame(() => (slides.scrollLeft = coverIndex * slides.clientWidth));
             }
             // タップ：1枚ならすぐ拡大、2〜3枚なら縦に並べて表示。長押し：写真を追加の画面
             bindLongPress(box, () => openAdder(day, type), () => {
@@ -3188,6 +3217,38 @@
           grid.appendChild(cell);
         }
         list.appendChild(sec);
+      });
+    }
+
+    // ホームのひとこと：その場で入力欄に変える（編集画面と同じく、画面の中の入力欄なので
+    // キーボードが出てもブラウザが見える位置までスクロールしてくれる）。入力を終えるか決定で保存
+    function editHitoInline(row, day, value) {
+      if (row.querySelector('input')) return; // 入力中
+      const text = row.querySelector('.hito-text');
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'hito-input';
+      input.maxLength = 200;
+      input.enterKeyHint = 'done';
+      input.autocomplete = 'off';
+      input.placeholder = '例：公園に遊びに行った';
+      input.value = value;
+      text.replaceWith(input);
+      input.focus();
+      setTimeout(() => input.scrollIntoView({ block: 'center', behavior: 'smooth' }), 300); // キーボードが出た後に
+      let saved = false;
+      const save = async () => {
+        if (saved) return;
+        saved = true;
+        await setSlotText(day, MEMO, input.value.trim());
+        refreshAll();
+      };
+      input.addEventListener('blur', save);
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.isComposing) {
+          save();
+          input.blur(); // キーボードを閉じる
+        }
       });
     }
 
@@ -3436,8 +3497,10 @@
           img.src = calUrls.get(photo);
           cell.appendChild(img);
           cell.classList.add('has-photo');
-        } else if (list.length) {
-          cell.insertAdjacentHTML('beforeend', '<span class="cal-dot"></span>');
+        } else {
+          // 写真のない日も縦画面では同じ高さにするための空き（横向きでは使わない）
+          cell.insertAdjacentHTML('beforeend', '<span class="cal-ph"></span>');
+          if (list.length) cell.insertAdjacentHTML('beforeend', '<span class="cal-dot"></span>');
         }
         cell.insertAdjacentHTML('beforeend', `<span class="cal-num">${d}</span>`);
         bindDayCell(cell, day);
