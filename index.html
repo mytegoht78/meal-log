@@ -121,10 +121,33 @@
       color: var(--sub);
       font-size: 0.85em;
     }
+    .filter {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin: 0 0 8px;
+      font-size: 1em;
+    }
+    .filter select {
+      padding: 6px 4px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      background: #fff;
+      font-family: inherit;
+      font-size: 1em;
+    }
+    .filter select + select {
+      margin-left: 4px;
+    }
+    .empty {
+      color: var(--sub);
+      text-align: center;
+      padding: 24px 0;
+    }
     .day-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 6px;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
     }
     .cell-label {
       font-size: 0.8em;
@@ -136,12 +159,57 @@
       position: relative;
       display: block;
       width: 100%;
-      aspect-ratio: 1;
+      aspect-ratio: 4 / 3;
       padding: 0;
       border: none;
       border-radius: 8px;
       overflow: hidden;
       background: #eee;
+    }
+    /* 写真がなく文字だけのマス */
+    .cell-box.text {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px;
+      border: 1px solid var(--line);
+      background: #fff7ea;
+      color: var(--text);
+      font-size: 0.9em;
+      line-height: 1.4;
+    }
+    .cell-box.text span {
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      word-break: break-all;
+    }
+    /* ひとこと */
+    .hito {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+      margin-top: 8px;
+      padding: 8px 4px 0;
+      border: none;
+      border-top: 1px solid var(--line);
+      background: none;
+      color: var(--text);
+      font-size: 0.95em;
+      text-align: left;
+    }
+    .hito-label {
+      flex: none;
+      color: var(--sub);
+      font-size: 0.85em;
+      padding-top: 1px;
+    }
+    .hito-text {
+      word-break: break-all;
+    }
+    .hito-text.blank {
+      color: #bbb;
     }
     .cell-box img {
       display: block;
@@ -370,6 +438,16 @@
     .ed-photo .remove {
       right: 4px;
     }
+    .ed-text {
+      width: 100%;
+      margin-top: 8px;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background: #fff;
+      font-family: inherit;
+      font-size: 1em;
+    }
     .ed-photo select {
       width: 100%;
       margin-top: 4px;
@@ -450,11 +528,33 @@
       background: #000;
       z-index: 20;
     }
-    #quiet-video {
+    /* 横4：縦3 の枠。映像を枠いっぱいに表示し、見えている範囲だけを保存する */
+    .cam-stage {
       flex: 1;
-      width: 100%;
       min-height: 0;
-      object-fit: contain;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .cam-frame {
+      position: relative;
+      width: min(100%, calc((100dvh - 150px) * 4 / 3));
+      aspect-ratio: 4 / 3;
+      overflow: hidden;
+      background: #111;
+    }
+    #quiet-video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    #viewer-text {
+      padding: 0 16px;
+      color: #fff;
+      text-align: center;
+      word-break: break-all;
     }
     .cam-bar {
       display: flex;
@@ -468,6 +568,7 @@
       background: none;
       color: #fff;
       font-size: 1em;
+      white-space: nowrap;
     }
     #shutter {
       width: 72px;
@@ -537,6 +638,10 @@
     <label for="import-file" class="backup-btn">📂 読み込み</label>
   </div>
 
+  <div class="filter">
+    <select id="f-year" aria-label="年"></select>年
+    <select id="f-month" aria-label="月"></select>月
+  </div>
   <div id="list"></div>
 
   <!-- 写真を受け取るための部品（画面には出さない） -->
@@ -555,6 +660,8 @@
       <div class="label">種類</div>
       <div id="confirm-types" class="types"></div>
       <div id="confirm-note" class="note"></div>
+      <div class="label">文字（料理名・メモなど。なくてもOK）</div>
+      <input type="text" id="confirm-text" class="date-input" maxlength="200" placeholder="例：たまごかけご飯">
       <div class="actions">
         <button id="confirm-cancel" class="btn-sub">キャンセル</button>
         <button id="confirm-save" class="btn-main">保存</button>
@@ -570,9 +677,22 @@
         <button class="camera-btn" data-choose="app">📷 カメラ</button>
         <button class="camera-btn quiet" data-choose="quiet">🔇 静音カメラ</button>
         <button class="camera-btn gallery" data-choose="gallery">🖼 ギャラリー</button>
+        <button class="btn-sub" data-choose="text" style="padding:14px;border-radius:12px;font-weight:bold">✏️ 文字だけ記録</button>
       </div>
       <div class="actions">
         <button id="chooser-cancel" class="btn-sub">キャンセル</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 文字の入力（文字だけの記録・ひとこと） -->
+  <div id="text-sheet" class="overlay sheet-overlay" style="z-index:13">
+    <div class="sheet">
+      <h2 id="text-title"></h2>
+      <input type="text" id="text-input" class="date-input" maxlength="200" enterkeyhint="done">
+      <div class="actions">
+        <button id="text-cancel" class="btn-sub">キャンセル</button>
+        <button id="text-save" class="btn-main">保存</button>
       </div>
     </div>
   </div>
@@ -581,7 +701,7 @@
   <div id="day-editor" class="overlay">
     <div class="ed-top">
       <h2 id="ed-title"></h2>
-      <button id="ed-close">閉じる</button>
+      <button id="ed-close" aria-label="閉じる">×</button>
     </div>
     <div id="ed-body"></div>
   </div>
@@ -594,6 +714,7 @@
       <button id="viewer-close" aria-label="閉じる">×</button>
     </div>
     <img id="viewer-img" alt="食事の写真">
+    <div id="viewer-text"></div>
     <div id="viewer-info"></div>
     <button id="viewer-prev" class="viewer-nav" aria-label="前の写真">‹</button>
     <button id="viewer-next" class="viewer-nav" aria-label="次の写真">›</button>
@@ -601,7 +722,11 @@
 
   <!-- 静音カメラ -->
   <div id="quiet-cam" class="overlay">
-    <video id="quiet-video" autoplay playsinline muted></video>
+    <div class="cam-stage">
+      <div class="cam-frame">
+        <video id="quiet-video" autoplay playsinline muted></video>
+      </div>
+    </div>
     <div id="cam-msg"></div>
     <div class="cam-bar">
       <button id="cam-cancel">キャンセル</button>
@@ -621,22 +746,24 @@
     const pad = (n) => String(n).padStart(2, '0');
 
     const TYPES = {
+      diary: { label: '日記', icon: '📔' },
       breakfast: { label: '朝食', icon: '🌅' },
       lunch: { label: '昼食', icon: '☀️' },
       dinner: { label: '夕食', icon: '🌙' },
-      snack: { label: '間食', icon: '🍪' },
     };
-    const TYPE_ORDER = ['breakfast', 'lunch', 'dinner', 'snack'];
+    const TYPE_ORDER = ['diary', 'breakfast', 'lunch', 'dinner'];
+    const MEMO = 'memo'; // ひとこと（1日1つ。写真なしの文字だけ）
     const SOURCE_ICON = { app: '📷', quiet: '🔇', gallery: '🖼' };
+    // 以前の「間食」は「日記」になった
+    const normType = (t) => (t === 'snack' ? 'diary' : t);
 
-    // 時刻から食事の種類を決める
+    // 時刻から種類を決める（食事の時間以外は日記）
     function typeByTime(time) {
       const h = new Date(time).getHours();
       if (h >= 5 && h < 10) return 'breakfast';
       if (h >= 10 && h < 15) return 'lunch';
-      if (h >= 15 && h < 17) return 'snack';
       if (h >= 17 && h < 23) return 'dinner';
-      return 'snack';
+      return 'diary';
     }
 
     function formatSize(bytes) {
@@ -654,7 +781,7 @@
     }
     function formatDay(day) {
       const d = parseDay(day);
-      return `${d.getMonth() + 1}月${d.getDate()}日(${'日月火水木金土'[d.getDay()]})`;
+      return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日(${'日月火水木金土'[d.getDay()]})`;
     }
     function formatDateTime(time) {
       const d = new Date(time);
@@ -693,9 +820,10 @@
 
     // =====================================================
     // データベース（IndexedDB）
-    // 1件 = ある日のある種類の食事（例：11月24日の昼食）。1日に各種類1件まで
-    //   { key: "2026-11-24_lunch", day, type, cover: 代表写真のid,
+    // 1件 = ある日のある種類（例：11月24日の昼食）。1日に各種類1件まで
+    //   { key: "2026-11-24_lunch", day, type, cover: 代表写真のid, text: 料理名・メモ,
     //     photos: [{ id, blob, width, height, source, originalSize, takenAt, addedAt }] }
+    // type は diary / breakfast / lunch / dinner と、ひとことの memo（写真なし）
     // =====================================================
 
     // 以前の形式からの変換。写真の id は作り方を固定して、
@@ -713,7 +841,7 @@
     function fromV2Meal(m) {
       return {
         day: dayKey(m.eatenAt),
-        type: m.type,
+        type: normType(m.type),
         photos: m.photos.map((p, i) => ({
           ...p, id: `legacy-${m.createdAt}-${i}`, takenAt: m.eatenAt, addedAt: m.createdAt + i,
         })),
@@ -724,11 +852,12 @@
     function getDB() {
       if (!dbPromise) {
         dbPromise = new Promise((resolve, reject) => {
-          const req = indexedDB.open('meal-log', 3);
+          const req = indexedDB.open('meal-log', 4);
           req.onupgradeneeded = () => {
             const db = req.result;
             const tx = req.transaction;
-            const slots = db.objectStoreNames.contains('slots')
+            const hadSlots = db.objectStoreNames.contains('slots');
+            const slots = hadSlots
               ? tx.objectStore('slots')
               : db.createObjectStore('slots', { keyPath: 'key' });
 
@@ -757,8 +886,22 @@
                 merged.forEach((s) => {
                   s.photos.sort((a, b) => a.addedAt - b.addedAt);
                   s.cover = s.photos[0].id; // 一番最初に登録した写真を代表に
+                  s.text = '';
                   slots.put(s);
                 });
+                // 第3版の「間食」を「日記」に付け替える
+                if (hadSlots) {
+                  slots.openCursor().onsuccess = (e) => {
+                    const cursor = e.target.result;
+                    if (!cursor) return;
+                    const s = cursor.value;
+                    if (s.type === 'snack') {
+                      cursor.delete();
+                      slots.put({ ...s, type: 'diary', key: slotKey(s.day, 'diary') });
+                    }
+                    cursor.continue();
+                  };
+                }
               }));
           };
           req.onsuccess = () => resolve(req.result);
@@ -783,41 +926,61 @@
     const putSlot = (slot) => withStore('readwrite', (s) => s.put(slot));
     const deleteSlot = (key) => withStore('readwrite', (s) => s.delete(key));
 
-    // 写真を、ある日のある種類に追加（なければ作る。最初の写真が代表）
-    async function addPhotosToSlot(day, type, photos, preferredCover) {
-      const key = slotKey(day, type);
-      const slot = (await getSlot(key)) || { key, day, type, photos: [], cover: null };
+    // 書き換えは1つずつ順番に行う（文字の保存と★が同時に起きても、片方が消えないように）
+    let writeChain = Promise.resolve();
+    function serial(fn) {
+      const p = writeChain.then(fn);
+      writeChain = p.catch(() => {});
+      return p;
+    }
+    const emptySlot = (day, type) => ({ key: slotKey(day, type), day, type, photos: [], cover: null, text: '' });
+
+    // 保存。写真も文字もなくなったら消す。代表が無効なら先頭の写真を代表に
+    async function saveOrDelete(slot) {
+      if (slot.photos.length === 0 && !slot.text) return deleteSlot(slot.key);
+      if (!slot.photos.some((p) => p.id === slot.cover)) slot.cover = slot.photos[0]?.id ?? null;
+      return putSlot(slot);
+    }
+
+    async function rawAddPhotos(day, type, photos, preferredCover) {
+      const slot = (await getSlot(slotKey(day, type))) || emptySlot(day, type);
       const isNew = slot.photos.length === 0;
       slot.photos.push(...photos);
       if (isNew && preferredCover && photos.some((p) => p.id === preferredCover)) slot.cover = preferredCover;
-      if (!slot.cover) slot.cover = slot.photos[0].id;
-      await putSlot(slot);
+      await saveOrDelete(slot);
     }
-
-    // 写真を1枚取り外す（代表だったら次の写真が代表に。空になったら食事ごと消す）
-    async function takePhoto(key, photoId) {
+    async function rawTakePhoto(key, photoId) {
       const slot = await getSlot(key);
       const i = slot.photos.findIndex((p) => p.id === photoId);
       const [photo] = slot.photos.splice(i, 1);
-      if (slot.photos.length === 0) {
-        await deleteSlot(key);
-      } else {
-        if (slot.cover === photoId) slot.cover = slot.photos[0].id;
-        await putSlot(slot);
-      }
+      await saveOrDelete(slot);
       return { photo, slot };
     }
 
-    async function movePhoto(key, photoId, toType) {
-      const { photo, slot } = await takePhoto(key, photoId);
-      await addPhotosToSlot(slot.day, toType, [photo]);
-    }
-
-    async function setCover(key, photoId) {
+    // 写真を、ある日のある種類に追加（なければ作る。最初の写真が代表）
+    const addPhotosToSlot = (day, type, photos, preferredCover) =>
+      serial(() => rawAddPhotos(day, type, photos, preferredCover));
+    // 写真を1枚取り外す（代表だったら次の写真が代表に）
+    const takePhoto = (key, photoId) => serial(() => rawTakePhoto(key, photoId));
+    const movePhoto = (key, photoId, toType) => serial(async () => {
+      const { photo, slot } = await rawTakePhoto(key, photoId);
+      await rawAddPhotos(slot.day, toType, [photo]);
+    });
+    const setCover = (key, photoId) => serial(async () => {
       const slot = await getSlot(key);
+      if (!slot) return;
       slot.cover = photoId;
       await putSlot(slot);
-    }
+    });
+    // 文字を保存。onlyIfEmpty のときは、すでに文字があれば変えない。変えたら true
+    const setSlotText = (day, type, text, onlyIfEmpty = false) => serial(async () => {
+      const slot = (await getSlot(slotKey(day, type))) || emptySlot(day, type);
+      if (onlyIfEmpty && slot.text) return false;
+      if ((slot.text || '') === text) return false;
+      slot.text = text;
+      await saveOrDelete(slot);
+      return true;
+    });
 
     // =====================================================
     // 重ねて表示する画面の管理
@@ -987,7 +1150,12 @@
     document.querySelectorAll('[data-choose]').forEach((btn) => {
       btn.addEventListener('click', async () => {
         const how = btn.dataset.choose;
-        if (how === 'quiet') {
+        if (how === 'text') {
+          const { day, type } = addTarget;
+          addTarget = null;
+          await closeLayer();
+          openTextEditor(day, type);
+        } else if (how === 'quiet') {
           await closeLayer();
           openQuietCam();
         } else {
@@ -1000,6 +1168,46 @@
       addTarget = null;
       closeLayer();
     });
+
+    // =====================================================
+    // 文字の入力（文字だけの記録・ひとこと）
+    // =====================================================
+    let textSave = null;
+    function openTextSheet(title, value, placeholder, onSave) {
+      $('text-title').textContent = title;
+      const input = $('text-input');
+      input.value = value;
+      input.placeholder = placeholder;
+      textSave = onSave;
+      openLayer($('text-sheet'), { onClose: () => (textSave = null) });
+      setTimeout(() => input.focus(), 50);
+    }
+    async function saveTextSheet() {
+      const save = textSave;
+      if (!save) return;
+      const value = $('text-input').value.trim();
+      await closeLayer();
+      await save(value);
+    }
+    $('text-save').addEventListener('click', saveTextSheet);
+    $('text-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.isComposing) saveTextSheet();
+    });
+    $('text-cancel').addEventListener('click', closeLayer);
+
+    // ある日のある種類（またはひとこと）の文字を書く・直す
+    async function openTextEditor(day, type) {
+      const slot = await getSlot(slotKey(day, type));
+      const isMemo = type === MEMO;
+      openTextSheet(
+        `${formatDay(day)}の${isMemo ? 'ひとこと' : TYPES[type].label}`,
+        slot?.text || '',
+        isMemo ? '例：公園に遊びに行った' : '例：たまごかけご飯',
+        async (text) => {
+          await setSlotText(day, type, text);
+          refreshAll();
+        });
+    }
 
     // =====================================================
     // 静音カメラ（カメラ映像の1コマを保存するので音が鳴らない）
@@ -1039,7 +1247,16 @@
       const flash = $('flash');
       flash.classList.add('on');
       requestAnimationFrame(() => requestAnimationFrame(() => flash.classList.remove('on')));
-      const bitmap = await createImageBitmap(video); // 今のコマを確保してから閉じる
+      // 今のコマの中央を 横4：縦3 で切り出して確保してから閉じる（枠に見えていた範囲と同じ）
+      const vw = video.videoWidth;
+      const vh = video.videoHeight;
+      let sw = vw;
+      let sh = Math.round((vw * 3) / 4);
+      if (sh > vh) {
+        sh = vh;
+        sw = Math.round((vh * 4) / 3);
+      }
+      const bitmap = await createImageBitmap(video, Math.round((vw - sw) / 2), Math.round((vh - sh) / 2), sw, sh);
       await closeLayer();
       try {
         await receivePhotos([await makePhoto(bitmap, 'quiet', null, Date.now())]);
@@ -1062,8 +1279,9 @@
 
     function openConfirm(photos) {
       const first = Math.min(...photos.map((p) => p.takenAt));
-      pending = { photos, day: dayKey(first), type: typeByTime(first) };
+      pending = { photos, day: dayKey(first), type: typeByTime(first), textEdited: false };
       confirmDone = false;
+      $('confirm-text').value = '';
       renderConfirm();
       openLayer($('confirm'), {
         beforeClose: () => confirmDone || confirm('写真を追加せずに閉じますか？'),
@@ -1104,10 +1322,15 @@
       const { day, type } = pending;
       const slot = await getSlot(slotKey(day, type));
       if (!pending || pending.day !== day || pending.type !== type) return; // 途中で変わった
-      $('confirm-note').textContent = slot
+      $('confirm-note').textContent = slot?.photos.length
         ? `この日の${TYPES[type].label}にはすでに${slot.photos.length}枚あります。そこに追加します。`
         : '';
+      // まだ文字を触っていなければ、すでにある文字を表示しておく
+      if (!pending.textEdited) $('confirm-text').value = slot?.text || '';
     }
+    $('confirm-text').addEventListener('input', () => {
+      if (pending) pending.textEdited = true;
+    });
 
     $('confirm-date').addEventListener('change', () => {
       if ($('confirm-date').value) {
@@ -1118,9 +1341,10 @@
     $('confirm-cancel').addEventListener('click', closeLayer);
     $('confirm-save').addEventListener('click', async () => {
       if (!pending) return;
-      const { day, type, photos } = pending;
+      const { day, type, photos, textEdited } = pending;
       try {
         await addPhotosToSlot(day, type, photos);
+        if (textEdited) await setSlotText(day, type, $('confirm-text').value.trim());
         confirmDone = true;
         closeLayer();
         toast(`${formatDay(day)}の${TYPES[type].label}に保存しました`);
@@ -1138,8 +1362,7 @@
 
     function openDayEditor(day) {
       editingDay = day;
-      $('ed-title').textContent = `${formatDay(day)}の編集`;
-      $('day-editor').scrollTop = 0;
+      $('ed-title').textContent = formatDay(day);
       renderDayEditor();
       openLayer($('day-editor'), {
         onClose: () => {
@@ -1147,6 +1370,7 @@
           editorUrls.clear();
         },
       });
+      $('day-editor').scrollTop = 0; // 表示してからでないと効かない
     }
 
     async function renderDayEditor() {
@@ -1168,8 +1392,8 @@
           </div>`;
         sec.querySelector('.ed-add').addEventListener('click', () => openChooser(day, type));
 
-        if (!slot) {
-          sec.insertAdjacentHTML('beforeend', '<div class="ed-none">なし</div>');
+        if (!slot?.photos.length) {
+          sec.insertAdjacentHTML('beforeend', '<div class="ed-none">写真なし</div>');
         } else {
           const grid = document.createElement('div');
           grid.className = 'ed-photos';
@@ -1205,8 +1429,35 @@
           });
           sec.appendChild(grid);
         }
+        sec.appendChild(makeTextInput(day, type, slot?.text, type === 'diary' ? 'メモ' : '料理名・メモ'));
         body.appendChild(sec);
       }
+
+      // ひとこと
+      const memo = slots.find((s) => s.type === MEMO);
+      const sec = document.createElement('section');
+      sec.className = 'ed-sec';
+      sec.innerHTML = '<div class="ed-head">💬 ひとこと</div>';
+      sec.appendChild(makeTextInput(day, MEMO, memo?.text, '例：公園に遊びに行った'));
+      body.appendChild(sec);
+    }
+
+    // 編集画面の文字欄（入力を終えたら保存。編集画面は描き直さない）
+    function makeTextInput(day, type, value, placeholder) {
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'ed-text';
+      input.maxLength = 200;
+      input.enterKeyHint = 'done';
+      input.placeholder = placeholder;
+      input.value = value || '';
+      input.addEventListener('change', async () => {
+        if (await setSlotText(day, type, input.value.trim())) showList();
+      });
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.isComposing) input.blur();
+      });
+      return input;
     }
 
     $('ed-close').addEventListener('click', closeLayer);
@@ -1224,7 +1475,9 @@
       viewerPhotos = photos;
       viewerIndex = index;
       viewerSlotKey = key;
-      viewerCover = key ? (await getSlot(key))?.cover : null;
+      const slot = key ? await getSlot(key) : null;
+      viewerCover = slot?.cover;
+      $('viewer-text').textContent = slot?.text || '';
       renderViewer();
       openLayer($('viewer'), {
         onClose: () => {
@@ -1295,14 +1548,39 @@
     });
 
     // =====================================================
-    // 一覧（1日 = 朝食・昼食・夕食・間食の4マス）
+    // 一覧（1日 = 日記・朝食・昼食・夕食の4マス＋ひとこと）
     // =====================================================
     const listUrls = makeUrlCache();
+    // 開いたときは今年・月は「－」（1年分）
+    let filterYear = new Date().getFullYear();
+    let filterMonth = 0;
+
+    const monthSelect = $('f-month');
+    monthSelect.innerHTML = '<option value="0">－</option>' +
+      Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join('');
+    monthSelect.addEventListener('change', () => {
+      filterMonth = Number(monthSelect.value);
+      showList();
+    });
+    $('f-year').addEventListener('change', () => {
+      filterYear = Number($('f-year').value);
+      showList();
+    });
 
     async function showList() {
       const list = $('list');
-      const slots = await getAllSlots();
+      const all = await getAllSlots();
       listUrls.clear();
+
+      // 年の選択肢：記録がある年と今年
+      const years = [...new Set([new Date().getFullYear(), ...all.map((s) => Number(s.day.slice(0, 4)))])]
+        .sort((a, b) => b - a);
+      $('f-year').innerHTML = years.map((y) => `<option value="${y}">${y}</option>`).join('');
+      $('f-year').value = filterYear;
+      monthSelect.value = filterMonth;
+
+      const prefix = filterMonth ? `${filterYear}-${pad(filterMonth)}-` : `${filterYear}-`;
+      const slots = all.filter((s) => s.day.startsWith(prefix));
 
       const byDay = new Map();
       for (const s of slots) {
@@ -1310,7 +1588,7 @@
         byDay.get(s.day)[s.type] = s;
       }
       const today = dayKey(Date.now());
-      if (!byDay.has(today)) byDay.set(today, {}); // 今日は記録がなくても出す
+      if (today.startsWith(prefix) && !byDay.has(today)) byDay.set(today, {}); // 今日は記録がなくても出す
 
       list.innerHTML = '';
       if (slots.length > 0) {
@@ -1318,6 +1596,8 @@
         const total = slots.reduce((n, s) => n + s.photos.reduce((t, p) => t + p.blob.size, 0), 0);
         const dayCount = new Set(slots.map((s) => s.day)).size;
         list.innerHTML = `<p class="summary">${dayCount}日分・写真${photoCount}枚・合計 ${formatSize(total)}</p>`;
+      } else if (byDay.size === 0) {
+        list.innerHTML = '<p class="empty">この期間の記録はありません</p>';
       }
 
       [...byDay.keys()].sort().reverse().forEach((day) => {
@@ -1329,9 +1609,16 @@
             <span class="day-title">${formatDay(day)}${day === today ? '<span class="today">今日</span>' : ''}</span>
             <button class="day-edit">✎ 編集</button>
           </div>
-          <div class="day-grid"></div>`;
+          <div class="day-grid"></div>
+          <button class="hito"><span class="hito-label">ひとこと</span><span class="hito-text"></span></button>`;
         sec.querySelector('.day-edit').addEventListener('click', () => openDayEditor(day));
         const grid = sec.querySelector('.day-grid');
+
+        const memo = daySlots[MEMO]?.text;
+        const hitoText = sec.querySelector('.hito-text');
+        hitoText.textContent = memo || '＋ 書く';
+        hitoText.classList.toggle('blank', !memo);
+        sec.querySelector('.hito').addEventListener('click', () => openTextEditor(day, MEMO));
 
         for (const type of TYPE_ORDER) {
           const slot = daySlots[type];
@@ -1339,7 +1626,14 @@
           cell.innerHTML = `<div class="cell-label">${TYPES[type].label}</div>`;
           const box = document.createElement('button');
           box.className = 'cell-box';
-          if (slot) {
+          if (slot?.text && !slot.photos.length) {
+            // 写真がなければ文字を出す（タップで追加方法の選択へ）
+            box.classList.add('text');
+            const span = document.createElement('span');
+            span.textContent = slot.text;
+            box.appendChild(span);
+            box.addEventListener('click', () => openChooser(day, type));
+          } else if (slot) {
             const coverIndex = Math.max(0, slot.photos.findIndex((p) => p.id === slot.cover));
             const img = document.createElement('img');
             img.alt = `${formatDay(day)}の${TYPES[type].label}`;
@@ -1422,6 +1716,7 @@
           day: s.day,
           type: s.type,
           cover: s.cover,
+          text: s.text || '',
           photos: s.photos.map((p, i) => {
             const file = `photos/${s.day}_${s.type}_${i + 1}.jpg`;
             zip.file(file, p.blob); // JPEG は圧縮済みなので、そのまま入れる
@@ -1429,7 +1724,7 @@
             return { ...info, file };
           }),
         }));
-        zip.file('records.json', JSON.stringify({ app: 'meal-log', version: 3, slots: list }, null, 2), {
+        zip.file('records.json', JSON.stringify({ app: 'meal-log', version: 4, slots: list }, null, 2), {
           compression: 'DEFLATE',
         });
         const blob = await encryptBackup(await zip.generateAsync({ type: 'blob' }));
@@ -1472,7 +1767,7 @@
         // どの形式でも「日・種類・写真(file付き)」の並びにそろえる
         let parts;
         if (data.slots) {
-          parts = data.slots; // 今の形式
+          parts = data.slots.map((s) => ({ ...s, type: normType(s.type) })); // 第3版以降の形式
         } else if (data.meals) {
           parts = data.meals.map(fromV2Meal); // 食事単位だった形式
         } else if (data.records) {
@@ -1489,7 +1784,10 @@
         const existing = new Set((await getAllSlots()).flatMap((s) => s.photos.map((p) => p.id)));
         let added = 0;
         let skipped = 0;
+        let texts = 0;
         for (const part of parts) {
+          // 文字は、こちらにまだ文字がないときだけ入れる
+          if (part.text && (await setSlotText(part.day, part.type, part.text, true))) texts++;
           const photos = [];
           for (const p of part.photos) {
             const f = zip.file(p.file);
@@ -1505,7 +1803,8 @@
           await addPhotosToSlot(part.day, part.type, photos, part.cover);
           added += photos.length;
         }
-        toast(`読み込みました：写真${added}枚を追加` + (skipped ? `・重複などで飛ばした ${skipped}枚` : ''), 4000);
+        toast(`読み込みました：写真${added}枚` + (texts ? `・文字${texts}件` : '') + 'を追加' +
+          (skipped ? `・重複などで飛ばした ${skipped}枚` : ''), 4000);
         refreshAll();
       } catch (e) {
         toast('読み込みに失敗しました：' + e.message, 5000);
