@@ -2447,11 +2447,13 @@
       font-size: 0.8em;
       line-height: 1.5;
     }
-    #imp-add {
+    #imp-add,
+    .imp-choice.first {
       border-color: var(--accent);
       background: var(--accent-soft);
     }
-    #imp-add b {
+    #imp-add b,
+    .imp-choice.first b {
       color: var(--accent-ink);
     }
     /* テキストから取り込む */
@@ -2527,6 +2529,83 @@
       color: var(--ink2);
       font-size: 0.85em;
       line-height: 1.5;
+    }
+
+    /* ----- PCとスマホの同期 ----- */
+    .sync-bar {
+      margin: 0 0 10px;
+      padding: 10px 12px;
+      border: 1px solid var(--accent);
+      border-radius: 10px;
+      background: var(--accent-soft);
+    }
+    .sync-bar p {
+      margin: 0 0 8px;
+      color: var(--text);
+      font-size: 0.9em;
+      line-height: 1.5;
+      overflow-wrap: anywhere;
+    }
+    .sync-acts {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    #sync-box .sync-acts {
+      margin: 8px 0;
+    }
+    .sync-acts button {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 0.9em;
+    }
+    .sync-state {
+      display: inline-block;
+      margin-top: 4px;
+      padding: 3px 10px;
+      border-radius: 4px;
+      background: var(--chip-bg);
+      color: var(--ink2);
+      font-size: 0.85em;
+    }
+    .sync-state.bad {
+      background: #fdecea;
+      color: #c0392b;
+    }
+    #sync-box .set-note {
+      overflow-wrap: anywhere;
+    }
+    .sync-devs {
+      margin-top: 8px;
+      border-top: 1px solid var(--line);
+    }
+    .sync-devs > div {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      min-height: 44px;
+      padding: 6px 4px;
+      border-bottom: 1px solid var(--line);
+      font-size: 0.9em;
+    }
+    .sync-devs small {
+      display: block;
+      color: var(--sub);
+      font-size: 0.85em;
+    }
+    .sync-devs button {
+      padding: 6px 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--card);
+      color: var(--ink2);
+      font-size: 0.85em;
+    }
+    .ed-over {
+      margin-top: 8px;
+      color: #c0392b;
+      font-size: 0.85em;
     }
 
     /* PC 用の部品（スマホでは出さない） */
@@ -2633,6 +2712,7 @@
         margin: 0;
       }
       #page-home #list,
+      #page-home .sync-bar,
       #page-home .pc-cols {
         grid-column: 1 / -1;
       }
@@ -2735,6 +2815,8 @@
     <div class="filter">
       <button id="f-ym" class="ym-btn" aria-label="表示する年月を選ぶ"></button>
     </div>
+    <!-- 同期で確認が必要なときだけ出る -->
+    <div id="sync-bar" class="sync-bar" hidden></div>
     <!-- PC で見たときだけ出す、列の見出し（スマホでは各マスに札を出す） -->
     <div class="pc-cols" aria-hidden="true"><span></span><span>日記</span><span>朝食</span><span>昼食</span><span>夕食</span><span>ひとこと</span></div>
     <div id="list"></div>
@@ -2790,6 +2872,11 @@
         <button id="undo-btn" class="backup-btn">元に戻す</button>
       </div>
       <p class="set-note">保存したファイル（.mlbk）は「ダウンロード」に入ります。OneDriveアプリでアップロードしておくと、PCのChromeでこのアプリを開いて読み込めます。</p>
+    </div>
+    <!-- PCとスマホの同期（中身は renderSync が描く。サンプル表示では出さない） -->
+    <div id="sync-group" class="set-group">
+      <div class="set-title"><i data-icon="sync"></i>PCとスマホの同期</div>
+      <div id="sync-box"></div>
     </div>
     <div class="set-group">
       <div class="set-title"><i data-icon="camera"></i>使うカメラ</div>
@@ -2998,6 +3085,32 @@
     </div>
   </div>
 
+  <!-- 同期ファイルを最初につないだとき、どちらの記録を使うか選ぶ -->
+  <div id="sync-sheet" class="overlay sheet-overlay" style="z-index:16">
+    <div class="sheet">
+      <h2>同期する記録を選ぶ</h2>
+      <div class="imp-compare">
+        <div class="imp-box"><div class="imp-title">この端末だけにあるもの</div><div id="sync-mine"></div></div>
+        <div class="imp-box"><div class="imp-title">ファイルだけにあるもの</div><div id="sync-file"></div></div>
+      </div>
+      <button data-sync="union" class="imp-choice first">
+        <b>両方を合わせる（安全）</b>
+        <small>どちらの記録も残します。片方で消したものが戻ることがあります。</small>
+      </button>
+      <button data-sync="mine" class="imp-choice">
+        <b>この端末の記録にする</b>
+        <small>同期ファイルを、この端末と同じ内容にします。ほかの端末からも消えるものが多いときは、そちらで確認が出ます。</small>
+      </button>
+      <button data-sync="file" class="imp-choice">
+        <b>同期ファイルの記録にする</b>
+        <small>この端末を、同期ファイルと同じ内容にします。前の状態は「元に戻す」で1回だけ戻せます。</small>
+      </button>
+      <div class="actions">
+        <button data-sync="close" class="btn-sub">やめる</button>
+      </div>
+    </div>
+  </div>
+
   <!-- カレンダー写真の選択（日付の長押しから） -->
   <div id="cal-pick" class="overlay sheet-overlay" style="z-index:16">
     <div class="sheet">
@@ -3091,6 +3204,7 @@
       upload: '<path d="M12 15V4M7.5 8.5L12 4l4.5 4.5"/><path d="M5 19.5h14"/>',
       clock: '<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>',
       info: '<circle cx="12" cy="12" r="8"/><path d="M12 11v5M12 8h.01"/>',
+      sync: '<path d="M19.5 9.5A8 8 0 0 0 5.2 8"/><path d="M5 4v4h4"/><path d="M4.5 14.5A8 8 0 0 0 18.8 16"/><path d="M19 20v-4h-4"/>',
       rotate: '<path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.5 4.5v4h-4"/>',
       crop: '<path d="M7 3v12.5A1.5 1.5 0 0 0 8.5 17H21"/><path d="M3 7h12.5A1.5 1.5 0 0 1 17 8.5V21"/>',
       palette: '<path d="M12 4a8 8 0 1 0 0 16c1.2 0 1.7-.9 1.3-1.8-.4-1 .3-2.2 1.7-2.2H17a3 3 0 0 0 3-3c0-5-3.6-9-8-9z"/><circle cx="8" cy="11" r="1"/><circle cx="11" cy="7.5" r="1"/><circle cx="15.5" cy="8.5" r="1"/>',
@@ -3211,7 +3325,7 @@
       let current = new Map();
       let previous = new Map();
       // v … 切り抜き直した回数（同じ id でも画像が変わるので、別の URL にする）
-      const keyOf = (photo) => (photo.id ? `${photo.id}:${photo.v || 0}` : photo.blob);
+      const keyOf = (photo) => (photo.id ? `${photo.id}:${photo.v || 0}${photo.ph ? ':ph' : ''}` : photo.blob); // ph … 届くのを待っている仮の画像
       return {
         get(photo) {
           const key = keyOf(photo);
@@ -3345,7 +3459,10 @@
       return new Promise((resolve, reject) => {
         const tx = db.transaction('slots', mode);
         const req = action(tx.objectStore('slots'));
-        tx.oncomplete = () => resolve(req.result);
+        tx.oncomplete = () => {
+          resolve(req.result);
+          if (mode === 'readwrite') syncTouched(); // 同期している端末なら、あとでファイルに書く
+        };
         tx.onerror = () => reject(tx.error);
       });
     }
@@ -3386,6 +3503,7 @@
       const slot = await getSlot(key);
       const i = slot.photos.findIndex((p) => p.id === photoId);
       const [photo] = slot.photos.splice(i, 1);
+      await keepTrash([photo]);
       await saveOrDelete(slot);
       return { photo, slot };
     }
@@ -3407,6 +3525,7 @@
     // 「写真を追加」画面の保存：外した写真を除き、新しい写真を足し、文字を変える
     const commitSlot = (day, type, removedIds, added, text) => serial(async () => {
       const slot = (await getSlot(slotKey(day, type))) || emptySlot(day, type);
+      await keepTrash(slot.photos.filter((p) => removedIds.has(p.id)));
       slot.photos = slot.photos.filter((p) => !removedIds.has(p.id));
       const fit = added.slice(0, Math.max(0, MAX_PHOTOS - slot.photos.length));
       slot.photos.push(...fit);
@@ -3859,13 +3978,17 @@
       const slot = await getSlot(key);
       const p = slot?.photos.find((x) => x.id === photoId);
       if (!p) return null;
+      if (p.wait !== undefined) {
+        toast('写真がほかの端末から届くまで、切り抜けません', 3000);
+        return null;
+      }
       const choice = await askCrop(p.blob, 0, 1, true);
       if (choice.mode !== 'crop') return null;
       try {
         toast('切り抜き中…', 0);
         const canvas = await cropToCanvas(choice.source || p.blob, choice.rect);
         const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.85));
-        const changes = { blob, width: canvas.width, height: canvas.height, v: (p.v || 0) + 1 };
+        const changes = { blob, width: canvas.width, height: canvas.height, v: Math.max(Date.now(), (p.v || 0) + 1) }; // v … 切り抜いた時刻（別の端末で切り抜いたものと区別できるように）
         const saved = await updatePhoto(key, photoId, changes);
         toast(saved ? '切り抜きました' : '写真が見つかりませんでした', 2500);
         refreshAll();
@@ -3879,6 +4002,7 @@
       const slot = await getSlot(key);
       const p = slot?.photos.find((x) => x.id === photoId);
       if (!p) return false;
+      if (changes.blob) await keepTrash([p]);
       Object.assign(p, changes);
       await putSlot(slot);
       return true;
@@ -4203,6 +4327,11 @@
             grid.appendChild(div);
           });
           sec.appendChild(grid);
+          // 両方の端末で足した写真が合わさると、上限を超えることがある
+          if (count > MAX_PHOTOS) {
+            sec.insertAdjacentHTML('beforeend',
+              `<div class="ed-over">${MAX_PHOTOS}枚を超えています。${count - MAX_PHOTOS}枚を削除するか、別の種類へ移してください</div>`);
+          }
         }
         sec.appendChild(makeTextInput(day, type, slot?.text, type === 'diary' ? 'メモ' : '料理名・メモ'));
         body.appendChild(sec);
@@ -5095,6 +5224,7 @@
     async function renderInfo() {
       if (!$('page-settings').classList.contains('active')) return;
       renderUndo();
+      renderSync();
       const all = await getAllSlots();
       const sum = (slots) => ({
         days: new Set(slots.map((s) => s.day)).size,
@@ -5353,6 +5483,10 @@
           cover: s.cover,
           text: s.text || '',
           photos: s.photos.map((p, i) => {
+            if (p.ph) {
+              const { blob: _, ...info } = p; // まだ届いていない写真は、情報だけ入れる
+              return info;
+            }
             const file = `photos/${s.day}_${s.type}_${i + 1}.jpg`;
             zip.file(file, p.blob); // JPEG は圧縮済みなので、そのまま入れる
             const { blob, ...info } = p;
@@ -5372,8 +5506,10 @@
         a.download = name;
         a.click();
         setTimeout(() => URL.revokeObjectURL(url), 10000);
-        const photoCount = slots.reduce((n, s) => n + s.photos.length, 0);
-        toast(`ダウンロードしました（写真${photoCount}枚・${formatSize(blob.size)}）`, 4000);
+        const photoCount = slots.reduce((n, s) => n + s.photos.filter((p) => !p.ph).length, 0);
+        const missing = countData(slots).photos - photoCount;
+        toast(`ダウンロードしました（写真${photoCount}枚・${formatSize(blob.size)}）` +
+          (missing ? `。まだ届いていない写真${missing}枚は入っていません` : ''), missing ? 7000 : 4000);
       } catch (e) {
         toast('バックアップに失敗しました：' + e.message, 5000);
       }
@@ -5425,7 +5561,7 @@
           throw new Error('食事記録アプリのバックアップではありません');
         }
         // 保存した日時（古いバックアップには無いので、ファイルの日時で代わりにする）
-        pendingImport = { zip, parts, savedAt: data.createdAt || file.lastModified, fromFileDate: !data.createdAt };
+        pendingImport = { zip, parts, savedAt: data.createdAt || file.lastModified, fromFileDate: !data.createdAt, legacy: !data.slots };
         toast('', 1);
         await openImportSheet();
       } catch (e) {
@@ -5476,6 +5612,7 @@
 
     // 写真ファイルを取り出す（見つからなければ null）
     async function readPhoto(zip, p) {
+      if (p.ph) return { ...p, blob: await getPlaceholder() }; // 届いていないうちに作ったバックアップ
       const f = zip.file(p.file);
       if (!f) return null;
       const { file: _, ...info } = p;
@@ -5486,7 +5623,11 @@
     async function importAdd({ zip, parts }) {
       toast('読み込み中…', 0);
       try {
-        const existing = new Set((await getAllSlots()).flatMap((s) => s.photos.map((p) => p.id)));
+        const before = await getAllSlots();
+        const existing = new Set(before.flatMap((s) => s.photos.map((p) => p.id)));
+        // 同期で届くのを待っている写真は、バックアップにあればそれで埋める
+        const waiting = new Map(before.flatMap((s) => s.photos.filter(isWaiting).map((p) => [p.id, { key: s.key, want: p.wait }])));
+        let filled = 0;
         let added = 0;
         let skipped = 0;
         let texts = 0;
@@ -5496,7 +5637,13 @@
           if (part.text && (await setSlotText(part.day, part.type, part.text, true))) texts++;
           const photos = [];
           for (const p of part.photos) {
-            const photo = existing.has(p.id) ? null : await readPhoto(zip, p);
+            const w = waiting.get(p.id);
+            if (w && !p.ph && !isWaiting(p) && (p.v || 0) === w.want) {
+              const got = await readPhoto(zip, p);
+              if (got && (await updatePhoto(w.key, p.id, { blob: got.blob, v: p.v, wait: undefined, ph: undefined }))) filled++;
+              continue;
+            }
+            const photo = existing.has(p.id) || p.ph ? null : await readPhoto(zip, p);
             if (!photo) {
               skipped++;
               continue;
@@ -5512,6 +5659,7 @@
           overflow += photos.length - n;
         }
         toast(`読み込みました：写真${added}枚` + (texts ? `・文字${texts}件` : '') + 'を追加' +
+          (filled ? `・届いていなかった写真${filled}枚を表示` : '') +
           (skipped ? `・重複などで飛ばした ${skipped}枚` : '') +
           (overflow ? `・${MAX_PHOTOS}枚を超えて入らなかった ${overflow}枚` : ''), 5000);
         refreshAll();
@@ -5522,7 +5670,7 @@
 
     // 置き換える：先に新しいデータを全部組み立ててから（途中で失敗しても今のデータは無事）、
     // 今の状態を「元に戻す」用に残し、まとめて入れ替える
-    async function importReplace({ zip, parts }) {
+    async function importReplace({ zip, parts, legacy }) {
       toast('置き換え中…', 0);
       try {
         const map = new Map();
@@ -5540,7 +5688,7 @@
         const slots = [...map.values()]
           .filter((s) => s.photos.length || s.text)
           .map((s) => {
-            const t = trimSlot(s);
+            const t = legacy ? trimSlot(s) : s; // 同期で3枚を超えている食事は、そのまま残す
             if (!t.photos.some((p) => p.id === t.cover)) t.cover = t.photos[0]?.id ?? null;
             return t;
           });
@@ -5704,6 +5852,7 @@
       const p = tiParsed;
       if (!p) return;
       $('ti-run').disabled = true;
+      syncBlock++; // 取り込みの途中で、同期が記録を入れ替えないように
       toast('取り込み中…', 0);
       try {
         const all = await getAllSlots();
@@ -5725,6 +5874,7 @@
       } catch (e) {
         toast('取り込みに失敗しました：' + e.message, 6000);
       } finally {
+        syncBlock--;
         $('ti-run').disabled = false;
       }
     });
@@ -6130,10 +6280,935 @@
       document.querySelector('label[for="import-file"]').addEventListener('click', notHere, true);
     }
 
+    // =====================================================
+    // PCとスマホの同期
+    // OneDrive などに置いた1つの JSON ファイルを、両方の端末で読み書きする。
+    //   ・文字・★♡・写真の並びなど（doc）は毎回全部、写真の画像は「まだ受け取っていない端末がある分」だけ入れる
+    //   ・書く前に必ずファイルを読み、「最後にそろった時点」（控え）を基準に両方の変更を合わせる（mergeDocs）
+    //   ・ファイルには版の名前 rev と、そこまでの版の一覧 hist を入れる。hist にある古い版が見えたとき
+    //     （OneDrive の同期の遅れ）は取り込まない
+    //   ・届いていない写真は、印の付いた仮の画像（ph）か前の画像（wait）のまま置き、届いたら差し替える
+    //   ・消える量が多いときは、実行せずに聞く
+    // 中身はバックアップと同じパスワードで暗号化する
+    // =====================================================
+
+    /* ---- 同期の計算（保存や画面には触らない） ---- */
+    const SYNC_CAP = 15 * 1024 * 1024; // 1回にファイルへ入れる写真の量の上限
+    const SYNC_BIG_PHOTOS = 10; // これ以上の写真か日数が消えるときは、先に聞く
+    const SYNC_BIG_DAYS = 5;
+
+    const sUniq = (a) => [...new Set(a.filter(Boolean))];
+    const sSame = (x, y) => JSON.stringify(x) === JSON.stringify(y);
+    const photoVer = (p) => p.wait ?? p.v ?? 0; // この写真の「あるべき」版（切り抜くと変わる）
+    const photoKey = (p) => `${p.id}:${photoVer(p)}`;
+    // 別々に取り込んだ同じ写真を見分ける（撮影日時と元の容量）
+    const photoSig = (p) => (p.takenAt && p.originalSize ? `${p.takenAt}|${p.originalSize}` : null);
+
+    function cleanPhoto(p) {
+      const o = {};
+      for (const k of Object.keys(p).sort()) {
+        if (['blob', 'wait', 'ph', 'v'].includes(k)) continue;
+        if (p[k] === undefined || p[k] === null || p[k] === false) continue;
+        o[k] = p[k];
+      }
+      const v = photoVer(p);
+      if (v) o.v = v;
+      return o;
+    }
+    // 記録全体を、画像を除いた決まった形にする
+    function toDoc(slots) {
+      return slots
+        .filter((s) => s.photos.length || s.text)
+        .map((s) => {
+          const photos = s.photos.map(cleanPhoto);
+          const cover = photos.some((p) => p.id === s.cover) ? s.cover : photos[0]?.id ?? null;
+          return { key: s.key, day: s.day, type: s.type, cover, text: s.text || '', photos };
+        })
+        .sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
+    }
+    function indexDoc(doc) {
+      const slots = new Map();
+      const photos = new Map();
+      for (const s of doc || []) {
+        slots.set(s.key, s);
+        for (const p of s.photos) photos.set(p.id, { p, key: s.key });
+      }
+      return { slots, photos };
+    }
+    const docKeys = (doc) => new Set(doc.flatMap((s) => s.photos.map(photoKey)));
+
+    // 3つの値から1つを選ぶ（片方だけが変えていればそちら、両方なら pref の側）
+    function pick3(hasB, b, m, t, pref) {
+      if (sSame(m, t)) return t;
+      if (hasB && sSame(m, b)) return t;
+      if (hasB && sSame(t, b)) return m;
+      return pref === 'm' ? m : t;
+    }
+    // 同じ食事の文字を両方で変えたとき：含む方があればそれ、なければ両方をつなぐ
+    function joinTexts(m, t) {
+      if (!m || !t || m === t) return m || t;
+      if (m.includes(t)) return m;
+      if (t.includes(m)) return t;
+      const parts = sUniq([...t.split(' ／ '), ...m.split(' ／ ')]).sort();
+      return parts.join(' ／ ');
+    }
+    function mergeText(hasB, b, m, t, keep) {
+      if (m === t) return t;
+      if (hasB && m === b) return keep && !t ? m : t;
+      if (hasB && t === b) return keep && !m ? t : m;
+      return joinTexts(m, t);
+    }
+    function mergePhoto(b, m, t, pref) {
+      const o = {};
+      const content = ['v', 'width', 'height'];
+      for (const k of new Set([...Object.keys(m), ...Object.keys(t)])) {
+        if (!content.includes(k)) o[k] = pick3(!!b, b?.[k], m[k], t[k], pref);
+      }
+      // 画像の版と大きさは、ひとまとまりで選ぶ（両方で切り抜いたら、あとから切り抜いた方）
+      const vm = m.v || 0, vt = t.v || 0, vb = b ? b.v || 0 : null;
+      const src = vm === vt ? t : b && vm === vb ? t : b && vt === vb ? m : vm > vt ? m : t;
+      for (const k of content) if (src[k] !== undefined) o[k] = src[k];
+      return cleanPhoto(o);
+    }
+    function renameIds(doc, map) {
+      if (!map.size) return doc;
+      return doc.map((s) => ({
+        ...s,
+        cover: map.get(s.cover) || s.cover,
+        photos: s.photos.map((p) => (map.has(p.id) ? cleanPhoto({ ...p, id: map.get(p.id) }) : p)),
+      }));
+    }
+
+    // B：基準（なければ null）、M：この端末、T：ファイル。keep：片方で消えたものも残す
+    function mergeDocs(B, M, T, { pref = 'm', keep = false } = {}) {
+      // 両方の端末で別々に取り込んだ同じ写真は、1つの写真とみなす
+      const b0 = indexDoc(B).photos, m0 = indexDoc(M).photos, t0 = indexDoc(T).photos;
+      const bySig = new Map();
+      for (const [id, x] of t0) {
+        const sig = photoSig(x.p);
+        if (sig && !m0.has(id) && !b0.has(id)) bySig.set(sig, id);
+      }
+      const renM = new Map(), renT = new Map();
+      for (const [id, x] of m0) {
+        const sig = photoSig(x.p);
+        if (!sig || t0.has(id) || b0.has(id) || !bySig.has(sig)) continue;
+        const other = bySig.get(sig);
+        bySig.delete(sig);
+        if (id < other) renT.set(other, id);
+        else renM.set(id, other);
+      }
+      const ib = indexDoc(B), im = indexDoc(renameIds(M, renM)), it = indexDoc(renameIds(T, renT));
+      const hasB = !!B;
+
+      // 写真
+      const photos = new Map(); // id → { p, key }
+      for (const id of new Set([...it.photos.keys(), ...im.photos.keys()])) {
+        const b = ib.photos.get(id), m = im.photos.get(id), t = it.photos.get(id);
+        if (m && t) {
+          photos.set(id, { p: mergePhoto(b?.p, m.p, t.p, pref), key: pick3(!!b, b?.key, m.key, t.key, pref) });
+        } else {
+          const x = m || t;
+          // 片方で消された写真：残っている側で何も変えていなければ消す
+          if (b && !keep && b.key === x.key && sSame(b.p, x.p)) continue;
+          photos.set(id, x);
+        }
+      }
+      // カレンダー写真は1日1枚（両方で選んだら、新しく選ばれた方）
+      const cal = new Map();
+      for (const [id, x] of photos) {
+        if (!x.p.cal) continue;
+        const day = x.key.slice(0, 10);
+        const fresh = !ib.photos.get(id)?.p.cal;
+        const c = cal.get(day);
+        if (!c || (fresh && !c.fresh) || (fresh === c.fresh && id > c.id)) cal.set(day, { id, fresh });
+      }
+      for (const [id, x] of photos) {
+        if (x.p.cal && cal.get(x.key.slice(0, 10)).id !== id) {
+          const { cal: _, ...p } = x.p;
+          photos.set(id, { ...x, p });
+        }
+      }
+      // 食事ごとの写真の並び（ファイルの順、そのあとにこの端末で増えた分）
+      const ids = new Map();
+      for (const [id, x] of photos) {
+        if (!ids.has(x.key)) ids.set(x.key, new Set());
+        ids.get(x.key).add(id);
+      }
+      const out = [];
+      for (const key of new Set([...it.slots.keys(), ...im.slots.keys(), ...ids.keys()])) {
+        const b = ib.slots.get(key), m = im.slots.get(key), t = it.slots.get(key);
+        const have = ids.get(key) || new Set();
+        const order = sUniq([...(t?.photos || []), ...(m?.photos || [])].map((p) => p.id).concat([...have])).filter((id) => have.has(id));
+        const text = mergeText(hasB, b?.text || '', m?.text || '', t?.text || '', keep);
+        if (!order.length && !text) continue;
+        let cover = m && t ? pick3(!!b, b?.cover, m.cover, t.cover, pref) : (m || t)?.cover;
+        if (!have.has(cover)) cover = [t?.cover, m?.cover].find((c) => have.has(c)) || order[0] || null;
+        const day = key.slice(0, 10);
+        out.push({ key, day, type: key.slice(11), cover, text, photos: order.map((id) => photos.get(id).p) });
+      }
+      return toDoc(out);
+    }
+
+    // from にあって to にない写真と日（from → to で消える量）
+    function lostFrom(from, to) {
+      const ti = indexDoc(to).photos;
+      const sigs = new Set([...ti.values()].map((x) => photoSig(x.p)).filter(Boolean));
+      const days = new Set(to.map((s) => s.day));
+      return {
+        photos: from.flatMap((s) => s.photos).filter((p) => !ti.has(p.id) && !sigs.has(photoSig(p))),
+        days: sUniq(from.map((s) => s.day)).filter((d) => !days.has(d)),
+      };
+    }
+    const isBig = (l) => l.photos.length >= SYNC_BIG_PHOTOS || l.days.length >= SYNC_BIG_DAYS;
+
+    // ファイルの位置づけ。bases：控えがある版の名前（Set）
+    function syncRelation(st, f, bases) {
+      if (f.rev && f.rev === st.rev) return { type: 'same' };
+      if (f.rev && st.hist.includes(f.rev)) return { type: 'old' };
+      const theirs = new Set(f.hist);
+      const base = [st.rev, ...st.hist].find((r) => r && theirs.has(r) && bases.has(r));
+      return base ? { type: 'merge', base } : { type: 'unknown' };
+    }
+
+    // 合わせた結果を決める。rel：位置づけ、base/last：控えの doc、choice：聞いたあとの答え
+    //   戻り値：{ doc } または { ask }
+    function decideDoc(M, f, rel, base, last, choice) {
+      if (rel.type === 'unknown') {
+        if (!f.doc.length || sSame(M, f.doc)) return { doc: M };
+        if (!M.length || choice === 'file') return { doc: f.doc };
+        if (choice === 'mine') return { doc: M };
+        if (choice === 'union') return { doc: mergeDocs(null, M, f.doc) };
+        return { ask: { kind: 'join', mine: lostFrom(M, f.doc), file: lostFrom(f.doc, M) } };
+      }
+      const T = rel.type === 'merge' ? f.doc : last || M;
+      const B = rel.type === 'merge' ? base : T;
+      if (choice === 'keep') return { doc: mergeDocs(B, M, T, { keep: true }) };
+      const doc = rel.type === 'merge' ? mergeDocs(B, M, T) : M;
+      if (choice !== 'delete') {
+        const incoming = lostFrom(M, doc); // ほかの端末で消された分
+        const outgoing = last ? lostFrom(lostFrom2(last, M), doc) : { photos: [], days: [] }; // この端末で消した分
+        if (isBig(incoming)) return { ask: { kind: 'delete', side: 'other', ...incoming } };
+        if (isBig(outgoing)) return { ask: { kind: 'delete', side: 'mine', ...outgoing } };
+      }
+      return { doc };
+    }
+    // last のうち、M で消えた部分だけの doc
+    function lostFrom2(last, M) {
+      const im = indexDoc(M).photos;
+      const days = new Set(M.map((s) => s.day));
+      return last
+        .map((s) => ({ ...s, photos: s.photos.filter((p) => !im.has(p.id)) }))
+        .filter((s) => s.photos.length || !days.has(s.day));
+    }
+
+    // doc のとおりに記録を組み立てる。写真の画像は、この端末にあるもの → 届いたもの → 最近手放したもの → 仮の画像
+    //   trash：最近この端末から消えた画像（key → { blob, sig, width, height }）
+    function buildSlots(local, doc, incoming, placeholder, trash = new Map()) {
+      const byId = new Map();
+      const bySig = new Map();
+      for (const s of local) {
+        for (const p of s.photos) {
+          byId.set(p.id, p);
+          const sig = photoSig(p);
+          if (sig && !p.ph) bySig.set(`${sig}|${p.v || 0}`, p);
+        }
+      }
+      for (const [key, x] of trash) {
+        const k = x.sig && `${x.sig}|${key.slice(key.lastIndexOf(':') + 1)}`;
+        if (k && !bySig.has(k)) bySig.set(k, x);
+      }
+      const localKey = new Map(local.map((s) => [s.key, s]));
+      const put = [];
+      const all = [];
+      for (const d of doc) {
+        const old = localKey.get(d.key);
+        let changed = !old || !sSame(toDoc([old])[0], d) || old.cover !== d.cover;
+        const photos = d.photos.map((info) => {
+          const want = info.v || 0;
+          const loc = byId.get(info.id);
+          if (loc && !loc.ph && (loc.v || 0) === want) {
+            if (loc.wait !== undefined) changed = true;
+            return { ...info, blob: loc.blob };
+          }
+          const blob = incoming.get(`${info.id}:${want}`) || trash.get(`${info.id}:${want}`)?.blob;
+          if (blob) {
+            changed = true;
+            return { ...info, blob };
+          }
+          const twin = photoSig(info) && bySig.get(`${photoSig(info)}|${want}`);
+          if (twin && twin.width === info.width && twin.height === info.height) {
+            changed = true;
+            return { ...info, blob: twin.blob };
+          }
+          if (loc && !loc.ph) {
+            const { v: _, ...rest } = info;
+            return { ...rest, ...(loc.v ? { v: loc.v } : {}), wait: want, blob: loc.blob }; // 前の画像のまま待つ
+          }
+          const { v: _, ...rest } = info;
+          return { ...rest, ph: true, wait: want, blob: loc?.blob || placeholder };
+        });
+        const slot = { key: d.key, day: d.day, type: d.type, photos, cover: d.cover, text: d.text };
+        all.push(changed ? slot : old);
+        if (changed) put.push(slot);
+      }
+      const keep = new Set(doc.map((d) => d.key));
+      const left = new Set(all.flatMap((s) => s.photos.filter((p) => !p.ph).map((p) => `${p.id}:${p.v || 0}`)));
+      const gone = local.flatMap((s) => s.photos).filter((p) => !p.ph && !left.has(`${p.id}:${p.v || 0}`)); // 手放した画像
+      return { all, put, del: local.filter((s) => !keep.has(s.key)).map((s) => s.key), gone };
+    }
+    const isWaiting = (p) => p.wait !== undefined;
+
+    // ファイルに入れる写真を決める。f：今のファイル、me：この端末、devices：端末の一覧
+    function planBlobs(slots, doc, f, me, devices, cap = SYNC_CAP) {
+      const others = Object.keys(devices).filter((d) => d !== me);
+      const have = new Map();
+      for (const s of slots) for (const p of s.photos) if (!isWaiting(p)) have.set(photoKey(p), p);
+      const alive = docKeys(doc);
+      const want = new Map(); // key → { key, need:Set, blob | raw }
+      for (const e of f.blobs) {
+        if (!alive.has(e.key)) continue;
+        const need = e.need.filter((d) => d !== me && others.includes(d));
+        if (need.length) want.set(e.key, { key: e.key, need: new Set(need), raw: e });
+      }
+      const add = (key, devs) => {
+        const p = have.get(key);
+        if (!p || !devs.length) return;
+        if (!want.has(key)) want.set(key, { key, need: new Set(), blob: p.blob });
+        devs.forEach((d) => want.get(key).need.add(d));
+      };
+      for (const d of others) for (const key of devices[d].lack || []) if (alive.has(key)) add(key, [d]);
+      const before = docKeys(f.doc);
+      for (const key of alive) if (!before.has(key)) add(key, others); // 新しい写真・切り抜き直した写真
+      const out = [];
+      let size = 0;
+      for (const e of want.values()) {
+        const n = e.blob ? e.blob.size : e.raw.size;
+        if (out.length && size + n > cap) continue;
+        size += n;
+        out.push({ ...e, need: [...e.need].sort() });
+      }
+      return out;
+    }
+    const blobSign = (list) => list.map((e) => e.key + '>' + [...e.need].sort().join()).sort().join('\n');
+    /* ---- 同期の計算ここまで ---- */
+
+    // ---- 同期用の保管場所（記録とは別のデータベース） ----
+    const syncHasFS = 'showOpenFilePicker' in window && 'showSaveFilePicker' in window;
+    const SYNC_ON = !SAMPLE_MODE && syncHasFS;
+    const syncKv = (store, mode, action) => new Promise((resolve, reject) => {
+      const req = indexedDB.open('meal-log-sync', 1);
+      req.onupgradeneeded = () => {
+        req.result.createObjectStore('kv');
+        req.result.createObjectStore('bases', { keyPath: 'rev' });
+        req.result.createObjectStore('trash', { keyPath: 'key' });
+      };
+      req.onerror = () => reject(req.error);
+      req.onsuccess = () => {
+        const db = req.result;
+        const tx = db.transaction(store, mode);
+        const r = action(tx.objectStore(store));
+        tx.oncomplete = () => {
+          db.close();
+          resolve(r?.result);
+        };
+        tx.onabort = tx.onerror = () => {
+          db.close();
+          reject(tx.error);
+        };
+      };
+    });
+    const kvGet = (k) => syncKv('kv', 'readonly', (s) => s.get(k));
+    const kvSet = (k, v) => syncKv('kv', 'readwrite', (s) => (v === undefined ? s.delete(k) : s.put(v, k)));
+
+    async function gzip(bytes) {
+      return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer());
+    }
+    async function gunzip(bytes) {
+      return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());
+    }
+    const toJsonBytes = (x) => new TextEncoder().encode(JSON.stringify(x));
+    const fromJsonBytes = (b) => JSON.parse(new TextDecoder().decode(b));
+
+    // 控え：その版のときの doc。新しい方から、自分で書いた版 20・ほかの端末の版 10 だけ残す
+    async function rememberBase(rev, doc, own) {
+      const gz = await gzip(toJsonBytes(doc));
+      const list = (await syncKv('bases', 'readonly', (s) => s.getAll())) || [];
+      let o = 0, t = 0;
+      const drop = list
+        .filter((b) => b.rev !== rev)
+        .sort((a, b) => b.at - a.at)
+        .filter((b) => (b.own ? ++o > 19 : ++t > 9))
+        .map((b) => b.rev);
+      await syncKv('bases', 'readwrite', (s) => {
+        drop.forEach((r) => s.delete(r));
+        return s.put({ rev, at: Date.now(), own, gz });
+      });
+    }
+    async function loadBase(rev) {
+      if (!rev) return null;
+      const b = await syncKv('bases', 'readonly', (s) => s.get(rev));
+      return b ? fromJsonBytes(await gunzip(b.gz)) : null;
+    }
+    const baseRevs = async () => new Set(await syncKv('bases', 'readonly', (s) => s.getAllKeys()));
+
+    // 最近この端末から消えた画像（削除・切り抜き直し・同期）。ほかの端末で残すことになったときに使う
+    async function keepTrash(photos) {
+      if (!syncFh) return;
+      const list = photos.filter((p) => p && p.blob && !p.ph);
+      if (!list.length) return;
+      try {
+        const all = await syncKv('trash', 'readonly', (s) => s.getAll());
+        const old = all.sort((x, y) => y.at - x.at).filter((x, i) => i >= 200 || Date.now() - x.at > 60 * 86400000);
+        await syncKv('trash', 'readwrite', (s) => {
+          old.forEach((x) => s.delete(x.key));
+          let last;
+          for (const p of list.slice(0, 300)) {
+            last = s.put({ key: `${p.id}:${p.v || 0}`, blob: p.blob, sig: photoSig(p), width: p.width, height: p.height, at: Date.now() });
+          }
+          return last;
+        });
+      } catch (e) {
+        console.warn(e);
+      }
+    }
+    async function loadTrash() {
+      return new Map((await syncKv('trash', 'readonly', (s) => s.getAll())).map((x) => [x.key, x]));
+    }
+
+    // ---- ファイルの形 ----
+    // { app, format, rev, data }。data は暗号化した中身（base64）
+    // 中身：doc などの長さ(4バイト) + doc など(gzip) + 写真を順に並べたもの
+    const SYNC_APP = 'meal-log-sync';
+    const syncKeys = new Map(); // salt → 鍵（毎回作ると時間がかかるので覚えておく）
+    const b64 = (blob) => new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result.slice(r.result.indexOf(',') + 1));
+      r.onerror = () => reject(r.error);
+      r.readAsDataURL(blob);
+    });
+    function unb64(text) {
+      if (Uint8Array.fromBase64) return Uint8Array.fromBase64(text);
+      const s = atob(text);
+      const out = new Uint8Array(s.length);
+      for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i);
+      return out;
+    }
+    async function syncKey(salt) {
+      const id = salt.join();
+      if (!syncKeys.has(id)) syncKeys.set(id, await deriveKey(salt));
+      return syncKeys.get(id);
+    }
+    let syncSalt = null;
+    async function packFile(rev, hist, doc, devices, entries) {
+      const parts = entries.map((e) => e.blob || e.raw.bytes());
+      const list = entries.map((e, i) => ({ key: e.key, need: e.need, size: parts[i].size ?? parts[i].byteLength }));
+      const head = await gzip(toJsonBytes({ rev, hist, doc, devices, blobs: list }));
+      const len = new Uint8Array(4);
+      new DataView(len.buffer).setUint32(0, head.byteLength);
+      const plain = await new Blob([len, head, ...parts]).arrayBuffer();
+      syncSalt ||= crypto.getRandomValues(new Uint8Array(16));
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const enc = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await syncKey(syncSalt), plain);
+      const data = await b64(new Blob([syncSalt, iv, enc]));
+      return JSON.stringify({ app: SYNC_APP, format: 1, about: '食事記録アプリの同期用ファイル（手で書き換えないでください）', rev, data });
+    }
+    async function unpackFile(text) {
+      if (!text.trim()) return { kind: 'empty' };
+      let j;
+      try {
+        j = JSON.parse(text);
+      } catch {
+        return { kind: 'bad', msg: 'ファイルが途中で切れているか、JSON ではありません' };
+      }
+      if (j?.app !== SYNC_APP) return { kind: 'foreign', msg: '食事記録アプリの同期ファイルではありません' };
+      if (j.format !== 1) return { kind: 'bad', msg: '新しい版のアプリで作られています。アプリを開き直してください' };
+      try {
+        const bytes = unb64(j.data);
+        const key = await syncKey(bytes.slice(0, 16));
+        const plain = new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: bytes.slice(16, 28) }, key, bytes.subarray(28)));
+        const n = new DataView(plain.buffer).getUint32(0);
+        const h = fromJsonBytes(await gunzip(plain.subarray(4, 4 + n)));
+        let at = 4 + n;
+        const blobs = h.blobs.map((e) => {
+          const from = at;
+          at += e.size;
+          return { ...e, bytes: () => plain.slice(from, from + e.size) };
+        });
+        return { kind: 'ok', rev: h.rev, hist: h.hist, doc: toDoc(h.doc), devices: h.devices, blobs };
+      } catch {
+        return { kind: 'bad', msg: '中身が壊れています' };
+      }
+    }
+
+    // ---- 同期の本体 ----
+    // none 未設定／need 再接続待ち／ok／err 読み書きの失敗／hold ファイルが空・壊れている／ask 聞いている途中
+    let syncFh = null;
+    let syncState = 'none';
+    let syncMsg = '';
+    let syncAsk = null;
+    let syncDirty = false; // まだファイルに書いていない変更がある
+    let syncTimer = 0;
+    let syncRunning = false;
+    let syncInfo = { last: 0, wait: 0, send: 0, devices: {} };
+    let syncChain = Promise.resolve();
+    let syncBlock = 0; // まとめて入れ替える処理の途中は待つ
+
+    // 入力や編集の途中で記録を差し替えると操作が壊れるので、その間は待つ
+    function syncBusy() {
+      const el = document.activeElement;
+      return layers.length > 0 || piRunning || syncBlock > 0 ||
+        (el && (el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && el.type === 'text')));
+    }
+    // 記録を書き換えるたびに呼ばれる（withStore から）
+    function syncTouched() {
+      if (!SYNC_ON) return;
+      syncDirty = true;
+      if (syncState === 'ok') scheduleSync(5000);
+      renderSync();
+    }
+    function scheduleSync(ms) {
+      clearTimeout(syncTimer);
+      syncTimer = setTimeout(() => runSync(), ms);
+    }
+
+    let placeholderBlob = null;
+    async function getPlaceholder() {
+      if (!placeholderBlob) {
+        const c = document.createElement('canvas');
+        c.width = 1000;
+        c.height = 750;
+        const g = c.getContext('2d');
+        g.fillStyle = '#efe7db';
+        g.fillRect(0, 0, 1000, 750);
+        g.fillStyle = '#a08f7c';
+        g.textAlign = 'center';
+        g.font = 'bold 84px sans-serif';
+        g.fillText('写真待ち', 500, 370);
+        g.font = '48px sans-serif';
+        g.fillText('ほかの端末から届きます', 500, 460);
+        placeholderBlob = await new Promise((resolve) => c.toBlob(resolve, 'image/jpeg', 0.8));
+      }
+      return placeholderBlob;
+    }
+
+    async function getDeviceId() {
+      let id = await kvGet('device');
+      if (!id) {
+        id = 'd' + Math.random().toString(36).slice(2, 10);
+        await kvSet('device', id);
+      }
+      return id;
+    }
+    function deviceName() {
+      const ua = navigator.userAgent;
+      return /Android/.test(ua) ? 'スマホ' : /iPhone|iPad/.test(ua) ? 'iPhone／iPad' : 'PC';
+    }
+
+    // 記録を読み、合わせ、書き戻すまでを1回の書き込みでまとめて行う
+    async function applySync(f, rel, base, last, choice, incoming, placeholder, trash, allowChange) {
+      const db = await getDB();
+      return serial(() => new Promise((resolve, reject) => {
+        const tx = db.transaction('slots', 'readwrite');
+        const st = tx.objectStore('slots');
+        let result;
+        st.getAll().onsuccess = (e) => {
+          try {
+            const local = e.target.result;
+            const M = toDoc(local);
+            const d = decideDoc(M, f, rel, base, last, choice);
+            if (d.ask) {
+              result = { ask: d.ask };
+              return;
+            }
+            const b = buildSlots(local, d.doc, incoming, placeholder, trash);
+            // 空の記録（写真も文字もない）を消すだけなら、変更とみなさない
+            const changes = b.put.length + b.del.filter((k) => M.some((s) => s.key === k)).length;
+            if (changes && !allowChange) {
+              result = { busy: true };
+              return;
+            }
+            b.put.forEach((s) => st.put(s));
+            b.del.forEach((k) => st.delete(k));
+            result = { doc: d.doc, slots: b.all, changes, gone: b.gone };
+          } catch (err) {
+            tx.abort();
+            reject(err);
+          }
+        };
+        tx.oncomplete = () => resolve(result);
+        tx.onerror = tx.onabort = () => reject(tx.error || new Error('書き込めませんでした'));
+      }));
+    }
+
+    async function readSyncFile() {
+      const text = await (await syncFh.getFile()).text();
+      return unpackFile(text);
+    }
+
+    // choice：聞いたあとの答え（union / file / mine / delete / keep）、isNew：新しく作ったファイル
+    function runSync({ choice = null, isNew = false, quiet = false, askSide = null } = {}) {
+      clearTimeout(syncTimer);
+      syncChain = syncChain.then(() => withSyncLock(() => syncOnce(choice, isNew, quiet, askSide))).catch(syncFailed);
+      return syncChain;
+    }
+    const withSyncLock = (fn) => (navigator.locks ? navigator.locks.request('meal-log-sync', fn) : fn());
+
+    function syncFailed(e) {
+      console.error(e);
+      syncRunning = false;
+      if (e?.name === 'NotAllowedError' || e?.name === 'SecurityError') {
+        syncState = 'need';
+      } else {
+        syncState = 'err';
+        syncMsg = e?.name === 'NotFoundError' ? '同期ファイルが見つかりません（移動や削除をした可能性があります）' : e?.message || String(e);
+      }
+      renderSync();
+    }
+
+    async function syncOnce(choice, isNew, quiet, askSide) {
+      if (!syncFh || syncState !== 'ok') return;
+      syncRunning = true;
+      renderSync();
+      try {
+        let f = await readSyncFile();
+        // この端末が書いている途中でアプリが止まり、ファイルが半端になったときは、書き直す
+        const broken = f.kind === 'empty' || f.kind === 'bad';
+        const redo = broken && (await kvGet('writing'));
+        if ((f.kind === 'empty' && isNew) || redo) f = { kind: 'ok', rev: null, hist: [], doc: [], devices: {}, blobs: [] };
+        if (f.kind !== 'ok') {
+          // 見に来ただけのときの空や読みかけは、次の機会にもう一度見る
+          if (quiet && !syncDirty) return;
+          syncState = 'hold';
+          syncMsg = f.kind === 'empty' ? '同期ファイルが空になっています' : f.msg;
+          return;
+        }
+        const me = await getDeviceId();
+        const st = (await kvGet('state')) || { rev: null, hist: [] };
+        const rel = syncRelation(st, f, await baseRevs());
+        const base = rel.type === 'merge' ? await loadBase(rel.base) : null;
+        const last = await loadBase(st.rev);
+        const incoming = new Map(f.blobs.map((e) => [e.key, new Blob([e.bytes()], { type: 'image/jpeg' })]));
+
+        // 大きく変わる前に、今の状態を「元に戻す」用に残す
+        if (choice && choice !== 'mine' && askSide !== 'mine') {
+          const all = await getAllSlots();
+          if (all.length) await saveUndo(all, '同期');
+        }
+        const wasDirty = syncDirty;
+        syncDirty = false;
+        const r = await applySync(f, rel, base, last, choice, incoming, await getPlaceholder(), await loadTrash(), !!choice || !syncBusy());
+        if (r.ask || r.busy) {
+          syncDirty = wasDirty || syncDirty;
+          if (r.ask) {
+            syncState = 'ask';
+            syncAsk = r.ask;
+            if (r.ask.kind === 'join') openSyncAsk();
+          } else {
+            scheduleSync(1500);
+          }
+          return;
+        }
+        await keepTrash(r.gone);
+        if (rel.type === 'merge' || rel.type === 'unknown') {
+          if (f.rev) {
+            await rememberBase(f.rev, f.doc, false);
+            st.hist = sUniq([st.rev, ...f.hist.slice(0, 200), ...st.hist.slice(0, 200)]).filter((x) => x !== f.rev);
+            st.rev = f.rev;
+            await kvSet('state', st);
+          }
+        }
+        if (r.changes) {
+          refreshAll();
+          toast('ほかの端末での変更を取り込みました', 3000);
+        }
+
+        // 書く必要があるか
+        const lack = r.slots.flatMap((s) => s.photos.filter(isWaiting).map(photoKey)).sort();
+        const mine = f.devices[me];
+        const devices = { ...f.devices, [me]: { name: deviceName(), at: Date.now(), lack } };
+        const entries = planBlobs(r.slots, r.doc, f, me, devices);
+        const need = isNew || redo || rel.type === 'old' || !sSame(r.doc, f.doc) || !mine || !sSame(mine.lack, lack) || blobSign(entries) !== blobSign(f.blobs);
+        if (need) {
+          const rev = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+          const before = { rev: st.rev, hist: st.hist };
+          const next = { rev, hist: sUniq([st.rev, ...st.hist]).slice(0, 400) };
+          const text = await packFile(rev, next.hist, r.doc, devices, entries);
+          await rememberBase(rev, r.doc, true);
+          await kvSet('state', next);
+          await kvSet('writing', rev);
+          try {
+            const w = await syncFh.createWritable();
+            await w.write(text);
+            await w.close();
+            await kvSet('writing', undefined);
+          } catch (e) {
+            // 書けたかどうか分からないので、この版も「前にあった版」として覚えておく
+            await kvSet('state', { rev: before.rev, hist: sUniq([...before.hist, rev]) });
+            syncDirty = true;
+            throw e;
+          }
+        }
+        const shown = need ? devices : f.devices;
+        syncInfo = {
+          last: Date.now(),
+          wait: lack.length,
+          send: entries.length,
+          devices: Object.fromEntries(Object.entries(shown).map(([id, d]) => [id, { name: d.name, at: d.at, lack: (d.lack || []).length, me: id === me }])),
+        };
+        await kvSet('info', syncInfo);
+        if (syncDirty) scheduleSync(5000);
+      } finally {
+        syncRunning = false;
+        renderSync();
+      }
+    }
+
+    // アプリに戻ってきたときに、ほかの端末の変更がないか見る
+    let syncLastCheck = 0;
+    function checkSync() {
+      if (!SYNC_ON || !syncFh || Date.now() - syncLastCheck < 2000) return;
+      if (syncState === 'err') syncState = 'ok'; // 通信できなかっただけのことが多いので、もう一度試す
+      if (syncState === 'ask' && syncAsk.kind === 'delete') syncState = 'ok'; // 消える量が変わっていないか見直す
+      if (syncState !== 'ok') return;
+      syncLastCheck = Date.now();
+      runSync({ quiet: true });
+    }
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        if (syncDirty && syncState === 'ok') runSync();
+      } else {
+        checkSync();
+      }
+    });
+    window.addEventListener('focus', checkSync);
+
+    // ---- 同期ファイルをつなぐ・外す ----
+    const SYNC_TYPES = [{ description: '同期ファイル', accept: { 'application/json': ['.json'] } }];
+    async function attachSync(h, isNew) {
+      await syncChain;
+      const prev = [syncFh, syncState];
+      syncFh = h;
+      let empty = false;
+      try {
+        const f = await readSyncFile();
+        if (f.kind === 'foreign' || f.kind === 'bad') throw new Error(f.msg); // 別のファイルを書き換えない
+        empty = f.kind === 'empty';
+        if (empty && !isNew && !confirm(`「${h.name}」は空のファイルです。この端末の記録で作りますか？`)) throw Object.assign(new Error(), { name: 'AbortError' });
+      } catch (e) {
+        [syncFh, syncState] = prev;
+        throw e;
+      }
+      await kvSet('file', h);
+      syncState = 'ok';
+      await runSync({ isNew: empty });
+    }
+    async function createSyncFile() {
+      try {
+        const h = await showSaveFilePicker({ suggestedName: 'meal-log-sync.json', types: SYNC_TYPES });
+        await attachSync(h, true);
+      } catch (e) {
+        if (e.name !== 'AbortError') toast('作れませんでした：' + e.message, 5000);
+      }
+      renderSync();
+    }
+    async function openSyncFile() {
+      try {
+        const [h] = await showOpenFilePicker({ types: SYNC_TYPES });
+        if ((await h.requestPermission({ mode: 'readwrite' })) !== 'granted') {
+          toast('ファイルへの書き込みが許可されませんでした', 4000);
+          return;
+        }
+        await attachSync(h, false);
+      } catch (e) {
+        if (e.name !== 'AbortError') toast('開けませんでした：' + e.message, 5000);
+      }
+      renderSync();
+    }
+    async function reconnectSync() {
+      try {
+        if ((await syncFh.requestPermission({ mode: 'readwrite' })) !== 'granted') return;
+        syncState = 'ok';
+        await runSync();
+      } catch (e) {
+        syncFailed(e);
+      }
+    }
+    async function forceSync() {
+      const c = countData(await getAllSlots());
+      if (!confirm(`「${syncFh.name}」に、この端末の記録（${c.days}日分・写真${c.photos}枚）を書き込みますか？\n今のファイルの中身は置き換わります。`)) return;
+      try {
+        if ((await syncFh.requestPermission({ mode: 'readwrite' })) !== 'granted') return;
+        const w = await syncFh.createWritable();
+        await w.write('');
+        await w.close();
+        syncState = 'ok';
+        await runSync({ isNew: true });
+      } catch (e) {
+        syncFailed(e);
+      }
+    }
+    async function disconnectSync() {
+      if (!confirm('同期をやめますか？\nこの端末の記録も、同期ファイルもそのまま残ります。')) return;
+      await syncChain;
+      clearTimeout(syncTimer);
+      syncFh = null;
+      syncState = 'none';
+      syncAsk = null;
+      await kvSet('file', undefined);
+      renderSync();
+    }
+    // 使わなくなった端末を一覧から外す（その端末のために写真を入れ続けないように）
+    function removeSyncDevice(id) {
+      const d = syncInfo.devices[id];
+      if (!d || !confirm(`「${d.name}」を端末の一覧から外しますか？\nその端末でもう一度同期すれば、自動で戻ります。`)) return;
+      runSync();
+      syncChain = syncChain.then(() => withSyncLock(async () => {
+        const f = await readSyncFile();
+        const st = await kvGet('state');
+        if (f.kind !== 'ok' || f.rev !== st?.rev) return; // 先に同期してから
+        const { [id]: _, ...devices } = f.devices;
+        const me = await getDeviceId();
+        const entries = planBlobs(await getAllSlots(), f.doc, f, me, devices);
+        const rev = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+        const next = { rev, hist: sUniq([st.rev, ...st.hist]).slice(0, 400) };
+        const text = await packFile(rev, next.hist, f.doc, devices, entries);
+        await rememberBase(rev, f.doc, true);
+        const w = await syncFh.createWritable();
+        await w.write(text);
+        await w.close();
+        await kvSet('state', next);
+      })).catch(syncFailed);
+      runSync(); // 待ち行列の最後に足すだけ（行列の中で待つと、自分の終わりを待って止まる）
+    }
+
+    // ---- 同期の画面 ----
+    const agoText = (t) => {
+      if (!t) return 'まだ';
+      const m = Math.floor((Date.now() - t) / 60000);
+      return m < 1 ? 'たった今' : m < 60 ? `${m}分前` : formatStamp(t);
+    };
+    function askText(a) {
+      if (a.kind === 'join') return 'この端末の記録と、同期ファイルの記録が違います。どちらを使うか選んでください。';
+      const amount = [a.photos.length ? `写真${a.photos.length}枚` : '', a.days.length ? `${a.days.length}日分の記録` : ''].filter(Boolean).join('・');
+      return a.side === 'other'
+        ? `ほかの端末で${amount}が消されています。この端末からも消しますか？`
+        : `この端末で${amount}が消えています。ほかの端末からも消しますか？`;
+    }
+    function renderSync() {
+      const bar = $('sync-bar');
+      const box = $('sync-box');
+      if (SAMPLE_MODE) return;
+      const buttons = (list) => list.map(([act, label, main]) => `<button data-sync="${act}" class="${main ? 'btn-main' : 'btn-sub'}">${label}</button>`).join('');
+      const alerts = {
+        need: ['同期ファイルに再接続してください', [['reconnect', '再接続', true]]],
+        err: ['同期できませんでした：' + syncMsg, [['reconnect', 'もう一度試す', true]]],
+        hold: [syncMsg + '。上書きを防ぐため、同期を止めています', [['reconnect', '読み直す', true], ['force', 'この端末の記録で書き込む']]],
+        ask: syncAsk && [askText(syncAsk), syncAsk.kind === 'join' ? [['ask', '選ぶ', true]] : [['keep', '残す', true], ['delete', '消す']]],
+      };
+      const al = alerts[syncState];
+      bar.hidden = !al;
+      if (al) bar.innerHTML = `<p>${escapeHtml(al[0])}</p><div class="sync-acts">${buttons(al[1])}</div>`;
+
+      if (!$('page-settings').classList.contains('active')) return;
+      if (!syncHasFS) {
+        box.innerHTML = '<p class="set-note">このブラウザでは使えません（Chrome か Edge で使えます）。</p>';
+        return;
+      }
+      if (syncState === 'none') {
+        box.innerHTML =
+          `<button data-sync="create" class="backup-btn">${svgIcon('plus')}同期ファイルを作る（最初の端末）</button>` +
+          `<button data-sync="open" class="backup-btn">${svgIcon('upload')}同期ファイルを開く（2台目の端末）</button>` +
+          '<p class="set-note">OneDrive のフォルダに同期ファイルを1つ置き、PCとスマホの両方で開きます。以後は記録を変えるたびに、自動で両方の変更を合わせます。<br>' +
+          'ファイルの作成はPCがおすすめです。写真が多いときは、先にバックアップ（.mlbk）を読み込んで両方の中身をそろえておくと早く済みます。</p>';
+        return;
+      }
+      const label = { ok: syncRunning ? '同期中…' : syncDirty ? 'まもなく保存します' : '同期しています', need: '再接続が必要です', err: '同期できていません', hold: '確認が必要です', ask: '確認が必要です' }[syncState];
+      const devs = Object.entries(syncInfo.devices).sort((a, b) => b[1].me - a[1].me);
+      box.innerHTML =
+        `<div class="sync-state ${syncState === 'ok' ? 'good' : 'bad'}">${label}</div>` +
+        (al ? `<p class="set-note">${escapeHtml(al[0])}</p><div class="sync-acts">${buttons(al[1])}</div>` : '') +
+        `<p class="set-note">ファイル：${escapeHtml(syncFh?.name || '')}<br>最後の同期：${agoText(syncInfo.last)}` +
+        (syncInfo.wait ? `<br>この端末に届いていない写真：${syncInfo.wait}枚（ほかの端末でアプリを開くと届きます）` : '') +
+        (syncInfo.send ? `<br>ほかの端末に渡す途中の写真：${syncInfo.send}枚` : '') + '</p>' +
+        (devs.length
+          ? '<div class="sync-devs">' + devs.map(([id, d]) =>
+            `<div><span>${escapeHtml(d.name)}${d.me ? '（この端末）' : ''}<small>${agoText(d.at)}${d.lack ? `・写真待ち${d.lack}枚` : ''}</small></span>` +
+            (d.me ? '' : `<button data-sync="remove" data-id="${escapeHtml(id)}">外す</button>`) + '</div>').join('') + '</div>'
+          : '') +
+        `<button data-sync="now" class="backup-btn">今すぐ同期</button>` +
+        `<button data-sync="disconnect" class="backup-btn">同期をやめる</button>` +
+        '<p class="set-note">同期ファイルには写真の全部は入りません。念のため、バックアップ（.mlbk）もときどき保存してください。</p>';
+    }
+    function openSyncAsk() {
+      if (!syncAsk || syncAsk.kind !== 'join' || layers.length > 0) return;
+      const amount = (l) => (l.photos.length || l.days.length ? `写真${l.photos.length}枚・${l.days.length}日分` : 'なし（文字などの違いだけ）');
+      $('sync-mine').innerHTML = `<b>${amount(syncAsk.mine)}</b>`;
+      $('sync-file').innerHTML = `<b>${amount(syncAsk.file)}</b>`;
+      openLayer($('sync-sheet'));
+    }
+    async function answerSync(choice) {
+      if (topLayer() === $('sync-sheet')) await closeLayer();
+      const askSide = syncAsk?.side || null;
+      syncAsk = null;
+      syncState = 'ok';
+      await runSync({ choice, askSide });
+      const done = { union: '両方の記録を合わせました', file: '同期ファイルの記録に切り替えました', mine: 'この端末の記録を同期ファイルに保存しました', keep: '残しました', delete: '消しました' };
+      if (syncState === 'ok') toast(done[choice], 3000);
+      renderUndo();
+    }
+    const syncActions = {
+      create: createSyncFile,
+      open: openSyncFile,
+      reconnect: reconnectSync,
+      force: forceSync,
+      disconnect: disconnectSync,
+      now: () => runSync(),
+      ask: openSyncAsk,
+      keep: () => answerSync('keep'),
+      delete: () => answerSync('delete'),
+      union: () => answerSync('union'),
+      file: () => answerSync('file'),
+      mine: () => answerSync('mine'),
+      close: closeLayer,
+    };
+    document.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-sync]');
+      if (!b) return;
+      if (b.dataset.sync === 'remove') removeSyncDevice(b.dataset.id);
+      else syncActions[b.dataset.sync]?.();
+    });
+
+    async function initSync() {
+      if (SAMPLE_MODE) {
+        $('sync-group').hidden = true;
+        return;
+      }
+      if (!SYNC_ON) return renderSync();
+      try {
+        syncInfo = (await kvGet('info')) || syncInfo;
+        const h = await kvGet('file');
+        if (h) {
+          syncFh = h;
+          syncDirty = true; // 前回書き終えていない変更があるかもしれない
+          if ((await h.queryPermission({ mode: 'readwrite' })) === 'granted') {
+            syncState = 'ok';
+            runSync();
+          } else {
+            syncState = 'need';
+          }
+        }
+      } catch (e) {
+        console.warn(e);
+        if (syncFh) syncState = 'need';
+      }
+      renderSync();
+    }
+
     (async () => {
       try {
         if (SAMPLE_MODE) await prepareSample();
         await showList();
+        initSync();
       } catch (e) {
         toast('データを開けませんでした：' + e.message, 8000);
       }
