@@ -6712,13 +6712,40 @@
       const data = await b64(new Blob([syncSalt, iv, enc]));
       return JSON.stringify({ app: SYNC_APP, format: 1, about: '食事記録アプリの同期用ファイル（手で書き換えないでください）', rev, data });
     }
+    // 先頭の { から、それと対になる } の直後までの長さ。閉じていなければ 0
+    function jsonEnd(text) {
+      let depth = 0;
+      let inStr = false;
+      let esc = false;
+      const start = text.search(/\S/);
+      if (text[start] !== '{') return 0;
+      for (let i = start; i < text.length; i++) {
+        const c = text[i];
+        if (inStr) {
+          if (esc) esc = false;
+          else if (c === '\\') esc = true;
+          else if (c === '"') inStr = false;
+        } else if (c === '"') inStr = true;
+        else if (c === '{' || c === '[') depth++;
+        else if ((c === '}' || c === ']') && --depth === 0) return i + 1;
+      }
+      return 0;
+    }
     async function unpackFile(text) {
       if (!text.trim()) return { kind: 'empty' };
       let j;
       try {
         j = JSON.parse(text);
       } catch {
-        return { kind: 'bad', msg: 'ファイルが途中で切れているか、JSON ではありません' };
+        // Android で前より短い内容を書くと、前の版の末尾がファイルの後ろに残ることがある。
+        // 中身は暗号で確かめるので、完結した先頭の部分だけを読む
+        const end = jsonEnd(text);
+        try {
+          if (!end) throw 0;
+          j = JSON.parse(text.slice(0, end));
+        } catch {
+          return { kind: 'bad', msg: 'ファイルが途中で切れているか、JSON ではありません' };
+        }
       }
       if (j?.app !== SYNC_APP) return { kind: 'foreign', msg: '食事記録アプリの同期ファイルではありません' };
       if (j.format !== 1) return { kind: 'bad', msg: '新しい版のアプリで作られています。アプリを開き直してください' };
@@ -6846,9 +6873,10 @@
     }
 
     // choice：聞いたあとの答え（union / file / mine / delete / keep）、isNew：新しく作ったファイル
-    function runSync({ choice = null, isNew = false, quiet = false, askSide = null } = {}) {
+    // fresh：ファイルの中身を読まずに、この端末の記録で置き換える
+    function runSync({ choice = null, isNew = false, quiet = false, askSide = null, fresh = false } = {}) {
       clearTimeout(syncTimer);
-      syncChain = syncChain.then(() => withSyncLock(() => syncOnce(choice, isNew, quiet, askSide))).catch(syncFailed);
+      syncChain = syncChain.then(() => withSyncLock(() => syncOnce(choice, isNew, quiet, askSide, fresh))).catch(syncFailed);
       return syncChain;
     }
     const withSyncLock = (fn) => (navigator.locks ? navigator.locks.request('meal-log-sync', fn) : fn());
@@ -6865,12 +6893,12 @@
       renderSync();
     }
 
-    async function syncOnce(choice, isNew, quiet, askSide) {
+    async function syncOnce(choice, isNew, quiet, askSide, fresh) {
       if (!syncFh || syncState !== 'ok') return;
       syncRunning = true;
       renderSync();
       try {
-        let f = await readSyncFile();
+        let f = fresh ? { kind: 'empty' } : await readSyncFile();
         // この端末が書いている途中でアプリが止まり、ファイルが半端になったときは、書き直す
         const broken = f.kind === 'empty' || f.kind === 'bad';
         const redo = broken && (await kvGet('writing'));
@@ -7038,11 +7066,8 @@
       if (!confirm(`「${syncFh.name}」に、この端末の記録（${c.days}日分・写真${c.photos}枚）を書き込みますか？\n今のファイルの中身は置き換わります。`)) return;
       try {
         if ((await syncFh.requestPermission({ mode: 'readwrite' })) !== 'granted') return;
-        const w = await syncFh.createWritable();
-        await w.write('');
-        await w.close();
         syncState = 'ok';
-        await runSync({ isNew: true });
+        await runSync({ isNew: true, fresh: true });
       } catch (e) {
         syncFailed(e);
       }
